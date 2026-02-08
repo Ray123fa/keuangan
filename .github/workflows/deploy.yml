@@ -30,6 +30,7 @@ jobs:
       run: |
         # Create tar archive excluding unnecessary files
         tar -czf deploy.tar.gz \
+          --exclude='deploy.tar.gz' \
           --exclude='.git' \
           --exclude='.github' \
           --exclude='.env' \
@@ -54,6 +55,7 @@ jobs:
           --exclude='tests' \
           --exclude='phpunit.xml' \
           --exclude='.phpunit.result.cache' \
+          --warning=no-file-changed \
           .
           
     - name: Deploy via SCP
