@@ -27,7 +27,7 @@ jobs:
       run: |
         ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-          "cd ${{ secrets.DEPLOY_PATH }} && \
+          "cd ${{ secrets.SSH_DEPLOY_PATH }} && \
            git pull origin master && \
            echo 'Git pull completed successfully'"
            
@@ -35,13 +35,13 @@ jobs:
       run: |
         ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-          "cd ${{ secrets.DEPLOY_PATH }} && composer install --no-dev --optimize-autoloader 2>&1 || echo 'Composer install skipped or failed'"
+          "cd ${{ secrets.SSH_DEPLOY_PATH }} && composer install --no-dev --optimize-autoloader 2>&1 || echo 'Composer install skipped or failed'"
           
     - name: Post-deploy - Set permissions
       run: |
         ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-          "cd ${{ secrets.DEPLOY_PATH }} && chmod -R 755 . && chmod -R 777 error.log 2>/dev/null || true"
+          "cd ${{ secrets.SSH_DEPLOY_PATH }} && chmod -R 755 . && chmod -R 777 error.log 2>/dev/null || true"
           
     - name: Deployment complete
       run: echo "✅ Deployment to ${{ secrets.SSH_HOST }} completed successfully!"
