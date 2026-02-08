@@ -13,11 +13,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Install rsync
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y rsync
-        
     - name: Setup SSH
       uses: shimataro/ssh-key-action@v2
       with:
@@ -31,37 +26,52 @@ jobs:
         ssh-keyscan -p ${{ secrets.SSH_PORT }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || \
         ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
         
-    - name: Deploy via rsync
+    - name: Create deployment archive
       run: |
-        rsync -avz --delete \
-          --exclude='.git/' \
-          --exclude='.github/' \
+        # Create tar archive excluding unnecessary files
+        tar -czf deploy.tar.gz \
+          --exclude='.git' \
+          --exclude='.github' \
           --exclude='.env' \
           --exclude='.env.*' \
-          --exclude='vendor/' \
+          --exclude='vendor' \
           --exclude='*.log' \
           --exclude='error.log' \
           --exclude='debug.log' \
-          --exclude='tmp/' \
-          --exclude='temp/' \
-          --exclude='cache/' \
-          --exclude='.cache/' \
+          --exclude='tmp' \
+          --exclude='temp' \
+          --exclude='cache' \
+          --exclude='.cache' \
           --exclude='.DS_Store' \
           --exclude='Thumbs.db' \
           --exclude='*.swp' \
           --exclude='*.swo' \
           --exclude='*.bak' \
           --exclude='*.backup' \
-          --exclude='node_modules/' \
-          --exclude='.vscode/' \
-          --exclude='.idea/' \
-          --exclude='tests/' \
+          --exclude='node_modules' \
+          --exclude='.vscode' \
+          --exclude='.idea' \
+          --exclude='tests' \
           --exclude='phpunit.xml' \
           --exclude='.phpunit.result.cache' \
-          -e "ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no" \
-          ./ \
-          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}
+          .
           
+    - name: Deploy via SCP
+      run: |
+        # Copy archive to server
+        scp -P ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
+          deploy.tar.gz \
+          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}deploy.tar.gz
+          
+    - name: Extract and cleanup on server
+      run: |
+        ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
+          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+          "cd ${{ secrets.DEPLOY_PATH }} && \
+           tar -xzf deploy.tar.gz && \
+           rm deploy.tar.gz && \
+           echo 'Files extracted successfully'"
+           
     - name: Post-deploy - Install dependencies
       run: |
         ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
