@@ -1,0 +1,17 @@
+{
+    "name": "keuangan/chatbot-whatsapp",
+    "description": "Chatbot WhatsApp untuk pencatatan keuangan dengan Fonnte",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": ">=7.4",
+        "phpoffice/phpspreadsheet": "^1.29"
+    },
+    "autoload": {
+        "classmap": [
+            "services/",
+            "handlers/",
+            "utils/"
+        ]
+    }
+}

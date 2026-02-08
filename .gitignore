@@ -1,0 +1,57 @@
+# =================================
+# Chatbot Keuangan - Git Ignore Rules
+# =================================
+
+# Environment & Configuration
+.env
+.env.local
+.env.*.local
+config_local.php
+
+# Dependencies
+/vendor/
+composer.lock
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.phpunit.result.cache
+*.sublime-workspace
+
+# Temporary Files
+/tmp/
+/temp/
+*.tmp
+*.log
+error.log
+debug.log
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Backup Files
+*.bak
+*.backup
+*~
+
+# Database
+*.sql
+!schema.sql
+
+# Cache
+.cache/
+cache/
+
+# Node (if using any frontend build tools)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Testing
+/tests/coverage/
+.phpunit.result.cache

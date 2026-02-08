@@ -1,0 +1,43 @@
+# Deny access to sensitive files
+<FilesMatch "\.(php|sql|log|json)$">
+    # Allow webhook.php only
+</FilesMatch>
+
+# Deny access to config and database files
+<FilesMatch "^(config|database|schema|composer|error)">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to directories
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
+
+# Deny access to hidden files
+<FilesMatch "^\.">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to vendor directory
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^vendor/ - [F,L]
+    RewriteRule ^services/ - [F,L]
+    RewriteRule ^handlers/ - [F,L]
+    RewriteRule ^utils/ - [F,L]
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "DENY"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# PHP settings (jika diizinkan)
+<IfModule mod_php.c>
+    php_flag display_errors off
+    php_flag log_errors on
+</IfModule>
