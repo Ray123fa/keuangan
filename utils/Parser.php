@@ -201,6 +201,69 @@ class Parser
     }
 
     /**
+     * Parse multi-date expenses format (ddmmyy)
+     * Format: 250226 followed by expenses on separate lines
+     * Example:
+     * 250226
+     * makan 7k nasduk
+     * belanja 100k alfa
+     * 260226
+     * makan 5k nasi
+     * 
+     * @param string $message
+     * @return array|null Array of ['date' => 'YYYY-MM-DD', 'expenses' => [...]] or null
+     */
+    public function parseMultiDateExpenses(string $message): ?array
+    {
+        $message = trim($message);
+        $lines = preg_split('/\r\n|\r|\n/', $message);
+        
+        if (empty($lines)) {
+            return null;
+        }
+        
+        $result = [];
+        $currentDate = null;
+        
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line)) {
+                continue;
+            }
+            
+            // Check if line is a date in ddmmyy format (6 digits)
+            if (preg_match('/^(\d{2})(\d{2})(\d{2})$/', $line, $matches)) {
+                $day = $matches[1];
+                $month = $matches[2];
+                $year = '20' . $matches[3]; // Assume 20xx
+                
+                if (checkdate((int)$month, (int)$day, (int)$year)) {
+                    $currentDate = "{$year}-{$month}-{$day}";
+                    if (!isset($result[$currentDate])) {
+                        $result[$currentDate] = [];
+                    }
+                }
+                continue;
+            }
+            
+            // If we have a current date, try to parse as expense
+            if ($currentDate !== null) {
+                $expense = $this->parseExpense($line);
+                if ($expense) {
+                    $result[$currentDate][] = $expense;
+                }
+            }
+        }
+        
+        // Filter out dates with no expenses
+        $result = array_filter($result, function($expenses) {
+            return !empty($expenses);
+        });
+        
+        return !empty($result) ? $result : null;
+    }
+
+    /**
      * Parse custom period dari argumen
      * Contoh: "2025", "januari 2025", "jan 2025", "2024-2025",
      *         "januari 2024 hingga juni 2025", "01/01/2024 hingga 31/12/2025"

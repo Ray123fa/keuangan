@@ -6,7 +6,6 @@
 require_once __DIR__ . '/../services/FonnteService.php';
 require_once __DIR__ . '/../services/ExpenseService.php';
 require_once __DIR__ . '/../services/ReportService.php';
-require_once __DIR__ . '/../services/SessionService.php';
 require_once __DIR__ . '/../utils/Parser.php';
 
 class MessageHandler
@@ -14,7 +13,6 @@ class MessageHandler
     private FonnteService $fonnte;
     private ExpenseService $expense;
     private ReportService $report;
-    private SessionService $session;
     private Parser $parser;
 
     public function __construct()
@@ -22,7 +20,6 @@ class MessageHandler
         $this->fonnte = new FonnteService();
         $this->expense = new ExpenseService();
         $this->report = new ReportService();
-        $this->session = new SessionService();
         $this->parser = new Parser();
     }
 
@@ -37,18 +34,6 @@ class MessageHandler
             return;
         }
 
-        // Cek dulu apakah ada pending expense yang butuh konfirmasi
-        if ($this->session->hasPending($sender)) {
-            $confirmation = $this->session->parseConfirmation($message);
-            
-            if ($confirmation !== null) {
-                $this->handleConfirmation($sender, $confirmation);
-                return;
-            }
-            // Kalau bukan konfirmasi, clear pending dan lanjut proses normal
-            $this->session->clearPending($sender);
-        }
-
         // Coba parse sebagai command dulu
         $command = $this->parser->parseCommand($message);
 
@@ -57,10 +42,17 @@ class MessageHandler
             return;
         }
 
-        // Coba parse sebagai multiple expense (makan 50rb + transport 25rb)
+        // Coba parse sebagai multi-date expenses (ddmmyy format)
+        $multiDateExpenses = $this->parser->parseMultiDateExpenses($message);
+        if ($multiDateExpenses !== null) {
+            $this->handleMultiDateExpenses($sender, $multiDateExpenses);
+            return;
+        }
+
+        // Coba parse sebagai multiple expense dalam satu baris (makan 50rb + transport 25rb)
         $multipleExpenses = $this->parser->parseMultipleExpenses($message);
         if (!empty($multipleExpenses)) {
-            $this->handlePendingExpenses($sender, $multipleExpenses);
+            $this->saveExpensesDirectly($sender, $multipleExpenses);
             return;
         }
 
@@ -68,12 +60,175 @@ class MessageHandler
         $expense = $this->parser->parseExpense($message);
 
         if ($expense) {
-            $this->handlePendingExpenses($sender, [$expense]);
+            $this->saveExpensesDirectly($sender, [$expense]);
             return;
         }
 
         // Tidak dikenali
         $this->sendUnknownMessage($sender);
+    }
+
+    /**
+     * Simpan expenses langsung tanpa konfirmasi
+     */
+    private function saveExpensesDirectly(string $sender, array $expenses, ?string $date = null): void
+    {
+        // Validasi kategori untuk semua expense
+        $validatedExpenses = [];
+        $invalidCategories = [];
+
+        foreach ($expenses as $exp) {
+            $category = $this->expense->getCategoryByName($exp['category']);
+            if (!$category) {
+                $invalidCategories[] = $exp['category'];
+            } else {
+                $validatedExpenses[] = $exp;
+            }
+        }
+
+        // Jika ada kategori yang tidak valid
+        if (!empty($invalidCategories)) {
+            $cats = implode(', ', array_unique($invalidCategories));
+            $this->fonnte->sendMessage(
+                $sender,
+                "Kategori tidak ditemukan: $cats\n\nKetik 'kategori' untuk lihat daftar, atau 'tambah kategori <nama>' untuk menambah."
+            );
+            return;
+        }
+
+        // Simpan semua expense
+        $savedCount = 0;
+        $savedLines = [];
+        $totalSaved = 0;
+
+        foreach ($validatedExpenses as $exp) {
+            $result = $this->expense->addExpense(
+                $exp['category'],
+                $exp['amount'],
+                $exp['description'] ?? null,
+                $date
+            );
+
+            if ($result['success']) {
+                $savedCount++;
+                $totalSaved += $exp['amount'];
+                $desc = $exp['description'] ? " ({$exp['description']})" : '';
+                $savedLines[] = sprintf(
+                    "- %s Rp%s%s",
+                    ucfirst($exp['category']),
+                    number_format($exp['amount'], 0, ',', '.'),
+                    $desc
+                );
+            }
+        }
+
+        if ($savedCount === 0) {
+            $this->fonnte->sendMessage($sender, "Gagal menyimpan transaksi.");
+            return;
+        }
+
+        // Build response message
+        $todayTotal = $this->expense->getTodayTotal();
+
+        if ($savedCount === 1) {
+            $message = "Tercatat: " . ltrim($savedLines[0], '- ');
+        } else {
+            $message = "Tercatat {$savedCount} pengeluaran:\n" . implode("\n", $savedLines);
+            $message .= sprintf("\nSubtotal: Rp%s", number_format($totalSaved, 0, ',', '.'));
+        }
+
+        // Add quick stats
+        $message .= sprintf("\n\nTotal hari ini: Rp%s", number_format($todayTotal, 0, ',', '.'));
+
+        $this->fonnte->sendMessage($sender, $message);
+    }
+
+    /**
+     * Handle multi-date expenses
+     */
+    private function handleMultiDateExpenses(string $sender, array $expensesByDate): void
+    {
+        $months = [
+            '01' => 'Jan', '02' => 'Feb', '03' => 'Mar',
+            '04' => 'Apr', '05' => 'Mei', '06' => 'Jun',
+            '07' => 'Jul', '08' => 'Agt', '09' => 'Sep',
+            '10' => 'Okt', '11' => 'Nov', '12' => 'Des',
+        ];
+
+        $allSavedLines = [];
+        $totalTransactions = 0;
+
+        foreach ($expensesByDate as $date => $expenses) {
+            // Validasi kategori untuk expenses di tanggal ini
+            $validatedExpenses = [];
+            $invalidCategories = [];
+
+            foreach ($expenses as $exp) {
+                $category = $this->expense->getCategoryByName($exp['category']);
+                if (!$category) {
+                    $invalidCategories[] = $exp['category'];
+                } else {
+                    $validatedExpenses[] = $exp;
+                }
+            }
+
+            // Skip jika ada kategori invalid di tanggal ini
+            if (!empty($invalidCategories)) {
+                $cats = implode(', ', array_unique($invalidCategories));
+                $allSavedLines[] = "{$date}: Kategori tidak ditemukan: $cats";
+                continue;
+            }
+
+            // Simpan semua expense untuk tanggal ini
+            $dateLines = [];
+            foreach ($validatedExpenses as $exp) {
+                $result = $this->expense->addExpense(
+                    $exp['category'],
+                    $exp['amount'],
+                    $exp['description'] ?? null,
+                    $date
+                );
+
+                if ($result['success']) {
+                    $totalTransactions++;
+                    $desc = $exp['description'] ? " ({$exp['description']})" : '';
+                    $dateLines[] = sprintf(
+                        "• %s Rp%s%s",
+                        ucfirst($exp['category']),
+                        number_format($exp['amount'], 0, ',', '.'),
+                        $desc
+                    );
+                }
+            }
+
+            if (!empty($dateLines)) {
+                // Format date for display (DD MMM YYYY)
+                $dateParts = explode('-', $date);
+                $day = $dateParts[2];
+                $month = $months[$dateParts[1]] ?? $dateParts[1];
+                $year = $dateParts[0];
+                $displayDate = "{$day} {$month} {$year}";
+
+                $allSavedLines[] = "{$displayDate}:";
+                foreach ($dateLines as $line) {
+                    $allSavedLines[] = "  {$line}";
+                }
+            }
+        }
+
+        if ($totalTransactions === 0) {
+            $this->fonnte->sendMessage($sender, "Gagal menyimpan transaksi.");
+            return;
+        }
+
+        // Build response message
+        $todayTotal = $this->expense->getTodayTotal();
+
+        $message = "Tersimpan {$totalTransactions} transaksi:\n\n";
+        $message .= implode("\n", $allSavedLines);
+        $message .= sprintf("\n\nTotal hari ini: Rp%s", number_format($todayTotal, 0, ',', '.'));
+
+        $this->fonnte->sendMessage($sender, $message);
     }
 
     /**
@@ -173,107 +328,6 @@ class MessageHandler
             default:
                 $this->sendUnknownMessage($sender);
         }
-    }
-
-    /**
-     * Handle pending expenses - save ke session untuk konfirmasi
-     */
-    private function handlePendingExpenses(string $sender, array $expenses): void
-    {
-        // Validasi kategori untuk semua expense
-        $validatedExpenses = [];
-        $invalidCategories = [];
-
-        foreach ($expenses as $exp) {
-            $category = $this->expense->getCategoryByName($exp['category']);
-            if (!$category) {
-                $invalidCategories[] = $exp['category'];
-            } else {
-                $validatedExpenses[] = $exp;
-            }
-        }
-
-        // Jika ada kategori yang tidak valid
-        if (!empty($invalidCategories)) {
-            $cats = implode(', ', array_unique($invalidCategories));
-            $this->fonnte->sendMessage(
-                $sender,
-                "Kategori tidak ditemukan: $cats\n\nKetik 'kategori' untuk lihat daftar, atau 'tambah kategori <nama>' untuk menambah."
-            );
-            return;
-        }
-
-        // Simpan ke pending dan minta konfirmasi
-        $this->session->savePending($sender, $validatedExpenses);
-        $confirmMessage = $this->session->formatConfirmationMessage($validatedExpenses);
-        $this->fonnte->sendMessage($sender, $confirmMessage);
-    }
-
-    /**
-     * Handle konfirmasi dari user (y/n/g)
-     */
-    private function handleConfirmation(string $sender, string $confirmation): void
-    {
-        $pending = $this->session->getPending($sender);
-        
-        if (!$pending) {
-            $this->fonnte->sendMessage($sender, "Tidak ada transaksi yang menunggu konfirmasi.");
-            return;
-        }
-
-        // Clear pending setelah diambil
-        $this->session->clearPending($sender);
-
-        if ($confirmation === 'no') {
-            $this->fonnte->sendMessage($sender, "Dibatalkan.");
-            return;
-        }
-
-        // Konfirmasi = yes, proses semua expense
-        $expenses = $pending['expenses'];
-        $savedCount = 0;
-        $savedLines = [];
-        $totalSaved = 0;
-
-        foreach ($expenses as $exp) {
-            $result = $this->expense->addExpense(
-                $exp['category'],
-                $exp['amount'],
-                $exp['description'] ?? null
-            );
-
-            if ($result['success']) {
-                $savedCount++;
-                $totalSaved += $exp['amount'];
-                $desc = $exp['description'] ? " ({$exp['description']})" : '';
-                $savedLines[] = sprintf(
-                    "- %s Rp%s%s",
-                    ucfirst($exp['category']),
-                    number_format($exp['amount'], 0, ',', '.'),
-                    $desc
-                );
-            }
-        }
-
-        if ($savedCount === 0) {
-            $this->fonnte->sendMessage($sender, "Gagal menyimpan transaksi.");
-            return;
-        }
-
-        // Build response message
-        $todayTotal = $this->expense->getTodayTotal();
-
-        if ($savedCount === 1) {
-            $message = "Tercatat: " . ltrim($savedLines[0], '- ');
-        } else {
-            $message = "Tercatat {$savedCount} pengeluaran:\n" . implode("\n", $savedLines);
-            $message .= sprintf("\nSubtotal: Rp%s", number_format($totalSaved, 0, ',', '.'));
-        }
-
-        // Add quick stats
-        $message .= sprintf("\n\nTotal hari ini: Rp%s", number_format($todayTotal, 0, ',', '.'));
-
-        $this->fonnte->sendMessage($sender, $message);
     }
 
     /**
@@ -562,6 +616,14 @@ Contoh:
 
 Banyak transaksi sekaligus:
   makan 50rb + transport 25rb gojek
+
+📅 TANGGAL LAMPAU (format: ddmmyy):
+250226
+makan 7k nasduk
+belanja 100k alfa
+
+260226
+makan 5k nasi
 
 📈 LIHAT TOTAL & RINGKASAN:
 • total hari ini

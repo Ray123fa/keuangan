@@ -27,17 +27,6 @@ CREATE TABLE IF NOT EXISTS expenses (
 -- Index untuk mempercepat query berdasarkan tanggal
 CREATE INDEX idx_expenses_created_at ON expenses(created_at);
 
--- Tabel untuk pending expenses (konfirmasi sebelum save)
-CREATE TABLE IF NOT EXISTS pending_expenses (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    phone VARCHAR(20) NOT NULL,
-    expenses_data JSON NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP NOT NULL,
-    INDEX idx_pending_phone (phone),
-    INDEX idx_pending_expires (expires_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- Insert kategori default
 INSERT INTO categories (name, is_custom) VALUES 
 ('makan', 0),
@@ -47,13 +36,3 @@ INSERT INTO categories (name, is_custom) VALUES
 ('tagihan', 0),
 ('lainnya', 0)
 ON DUPLICATE KEY UPDATE name = name;
-
-CREATE TABLE IF NOT EXISTS pending_expenses (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    phone VARCHAR(20) NOT NULL,
-    expenses_data JSON NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP NOT NULL,
-    INDEX idx_pending_phone (phone),
-    INDEX idx_pending_expires (expires_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

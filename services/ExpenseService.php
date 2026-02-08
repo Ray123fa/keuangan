@@ -16,8 +16,12 @@ class ExpenseService
 
     /**
      * Tambah pengeluaran baru
+     * @param string $categoryName Nama kategori
+     * @param float $amount Jumlah pengeluaran
+     * @param string|null $description Deskripsi opsional
+     * @param string|null $date Tanggal dalam format YYYY-MM-DD (null = today)
      */
-    public function addExpense(string $categoryName, float $amount, ?string $description = null): array
+    public function addExpense(string $categoryName, float $amount, ?string $description = null, ?string $date = null): array
     {
         // Cari atau buat kategori
         $category = $this->getCategoryByName($categoryName);
@@ -29,10 +33,18 @@ class ExpenseService
             ];
         }
 
-        $stmt = $this->db->prepare(
-            'INSERT INTO expenses (category_id, amount, description) VALUES (?, ?, ?)'
-        );
-        $stmt->execute([$category['id'], $amount, $description]);
+        // Build query with optional date override
+        if ($date !== null) {
+            $stmt = $this->db->prepare(
+                'INSERT INTO expenses (category_id, amount, description, created_at) VALUES (?, ?, ?, ?)'
+            );
+            $stmt->execute([$category['id'], $amount, $description, $date . ' 00:00:00']);
+        } else {
+            $stmt = $this->db->prepare(
+                'INSERT INTO expenses (category_id, amount, description) VALUES (?, ?, ?)'
+            );
+            $stmt->execute([$category['id'], $amount, $description]);
+        }
 
         return [
             'success' => true,
