@@ -1,0 +1,73 @@
+name: Deploy to Shared Hosting
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup SSH
+      uses: shimataro/ssh-key-action@v2
+      with:
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+        if_key_exists: replace
+        
+    - name: Add server to known_hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -p ${{ secrets.SSH_PORT }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || \
+        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+        
+    - name: Deploy via rsync
+      run: |
+        rsync -avz --delete \
+          --exclude='.git/' \
+          --exclude='.github/' \
+          --exclude='.env' \
+          --exclude='.env.*' \
+          --exclude='vendor/' \
+          --exclude='*.log' \
+          --exclude='error.log' \
+          --exclude='debug.log' \
+          --exclude='tmp/' \
+          --exclude='temp/' \
+          --exclude='cache/' \
+          --exclude='.cache/' \
+          --exclude='.DS_Store' \
+          --exclude='Thumbs.db' \
+          --exclude='*.swp' \
+          --exclude='*.swo' \
+          --exclude='*.bak' \
+          --exclude='*.backup' \
+          --exclude='node_modules/' \
+          --exclude='.vscode/' \
+          --exclude='.idea/' \
+          --exclude='tests/' \
+          --exclude='phpunit.xml' \
+          --exclude='.phpunit.result.cache' \
+          -e "ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no" \
+          ./ \
+          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}
+          
+    - name: Post-deploy - Install dependencies
+      run: |
+        ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
+          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+          "cd ${{ secrets.DEPLOY_PATH }} && composer install --no-dev --optimize-autoloader 2>&1 || echo 'Composer install skipped or failed'"
+          
+    - name: Post-deploy - Set permissions
+      run: |
+        ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
+          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+          "cd ${{ secrets.DEPLOY_PATH }} && chmod -R 755 . && chmod -R 777 error.log 2>/dev/null || true"
+          
+    - name: Deployment complete
+      run: echo "✅ Deployment to ${{ secrets.SSH_HOST }} completed successfully!"
