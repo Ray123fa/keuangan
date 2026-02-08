@@ -10,9 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
     - name: Setup SSH
       uses: shimataro/ssh-key-action@v2
       with:
@@ -26,54 +23,13 @@ jobs:
         ssh-keyscan -p ${{ secrets.SSH_PORT }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || \
         ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
         
-    - name: Create deployment archive
-      run: |
-        # Create tar archive excluding unnecessary files
-        tar --version
-        tar -czf deploy.tar.gz \
-          --exclude='deploy.tar.gz' \
-          --exclude='.git' \
-          --exclude='.github' \
-          --exclude='.env' \
-          --exclude='.env.*' \
-          --exclude='vendor' \
-          --exclude='*.log' \
-          --exclude='error.log' \
-          --exclude='debug.log' \
-          --exclude='tmp' \
-          --exclude='temp' \
-          --exclude='cache' \
-          --exclude='.cache' \
-          --exclude='.DS_Store' \
-          --exclude='Thumbs.db' \
-          --exclude='*.swp' \
-          --exclude='*.swo' \
-          --exclude='*.bak' \
-          --exclude='*.backup' \
-          --exclude='node_modules' \
-          --exclude='.vscode' \
-          --exclude='.idea' \
-          --exclude='tests' \
-          --exclude='phpunit.xml' \
-          --exclude='.phpunit.result.cache' \
-          . 2>&1 | grep -v "warning" || true
-        echo "Archive created: $(ls -lh deploy.tar.gz)"
-          
-    - name: Deploy via SCP
-      run: |
-        # Copy archive to server
-        scp -P ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
-          deploy.tar.gz \
-          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}deploy.tar.gz
-          
-    - name: Extract and cleanup on server
+    - name: Deploy via Git Pull
       run: |
         ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
           "cd ${{ secrets.DEPLOY_PATH }} && \
-           tar -xzf deploy.tar.gz && \
-           rm deploy.tar.gz && \
-           echo 'Files extracted successfully'"
+           git pull origin master && \
+           echo 'Git pull completed successfully'"
            
     - name: Post-deploy - Install dependencies
       run: |
