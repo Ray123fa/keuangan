@@ -138,7 +138,8 @@ class MessageHandler
         }
 
         // Add quick stats
-        $message .= sprintf("\n\nTotal hari ini: Rp%s", number_format($todayTotal, 0, ',', '.'));
+        $label = ($date === null) ? "Total hari ini" : "Total";
+        $message .= sprintf("\n\n%s: Rp%s", $label, number_format($todayTotal, 0, ',', '.'));
 
         $this->fonnte->sendMessage($sender, $message);
     }
@@ -226,7 +227,7 @@ class MessageHandler
 
         $message = "Tersimpan {$totalTransactions} transaksi:\n\n";
         $message .= implode("\n", $allSavedLines);
-        $message .= sprintf("\n\nTotal hari ini: Rp%s", number_format($todayTotal, 0, ',', '.'));
+        $message .= sprintf("\n\nTotal: Rp%s", number_format($todayTotal, 0, ',', '.'));
 
         $this->fonnte->sendMessage($sender, $message);
     }
