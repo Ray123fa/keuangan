@@ -618,6 +618,8 @@ Contoh:
 Banyak transaksi sekaligus:
   makan 50rb + transport 25rb gojek
 
+(Transaksi langsung tersimpan tanpa konfirmasi)
+
 📅 TANGGAL LAMPAU (format: ddmmyy):
 250226
 makan 7k nasduk

@@ -9,7 +9,7 @@ Teknologi: **PHP + MySQL + Fonnte API + PhpSpreadsheet**
 - ✅ Catat pengeluaran dengan format simpel: `kategori nominal [keterangan]`
 - ✅ Support berbagai format nominal: `50000`, `50rb`, `1.5jt`, `2,5rb`
 - ✅ Multi transaksi sekaligus: `makan 50rb + transport 25rb gojek`
-- ✅ Konfirmasi sebelum simpan (y/n untuk confirm/cancel)
+- ✅ Multi-date input: catat pengeluaran untuk tanggal lampau (format ddmmyy)
 - ✅ Total & ringkasan: hari/minggu/bulan/tahun ini
 - ✅ **Custom period**: tahun spesifik, bulan spesifik, range tahun, range bulan/tanggal
 - ✅ Perbandingan dengan periode sebelumnya (% perubahan)
@@ -135,10 +135,25 @@ Format nominal support:
 - `1.5jt` - juta dengan desimal
 - `2,5rb` - ribuan dengan koma desimal
 
-Bot akan:
-1. Parse dan tampilkan confimation
-2. User reply `y`/`ya`/`yes` untuk confirm
-3. Tampilkan total hari ini
+Bot akan langsung menyimpan dan menampilkan:
+- Konfirmasi transaksi yang tersimpan
+- Total hari ini (jika tanpa tanggal) atau Total (jika dengan tanggal spesifik)
+
+### 📅 Catat Pengeluaran Tanggal Lampau
+
+```
+Format: ddmmyy (tanggal, bulan, tahun 2 digit)
+
+Contoh (multi-date):
+250226
+makan 7k nasduk
+belanja 100k alfa
+
+260226
+makan 5k nasi
+```
+
+Bot akan menyimpan transaksi ke tanggal yang sesuai (25 Feb 2026 dan 26 Feb 2026).
 
 ### 📊 Total & Ringkasan
 
@@ -246,7 +261,12 @@ bantuan                         (tampilkan panduan ini)
 
 ## Changelog
 
-### v2.0 (Current - Feb 2026)
+### v2.1 (Current - Feb 2026)
+- ✨ Multi-date expense input: catat pengeluaran untuk tanggal lampau (format ddmmyy)
+- ✨ Direct save: pengeluaran langsung tersimpan tanpa konfirmasi y/n
+- 🔧 Fix: respons "Total hari ini" → "Total" ketika tanggal spesifik digunakan
+
+### v2.0 (Feb 2026)
 - ✨ Custom period support (tahun, bulan, range dengan berbagai format)
 - ✨ Perbandingan pengeluaran vs periode sebelumnya
 - ✨ Improved help message dengan emoji
@@ -268,4 +288,4 @@ Private Project
 
 **Created**: Feb 2026  
 **Status**: Active Development  
-**Last Updated**: 08 Feb 2026
+**Last Updated**: 09 Feb 2026
