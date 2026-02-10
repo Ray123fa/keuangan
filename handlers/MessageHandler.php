@@ -64,8 +64,7 @@ class MessageHandler
             return;
         }
 
-        // Tidak dikenali
-        $this->sendUnknownMessage($sender);
+        // Tidak dikenali - silent fail, tidak ada respon
     }
 
     /**
@@ -327,7 +326,7 @@ class MessageHandler
                 break;
 
             default:
-                $this->sendUnknownMessage($sender);
+                // Command tidak dikenali - silent fail, tidak ada respon
         }
     }
 

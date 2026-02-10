@@ -85,6 +85,13 @@ if (!checkRateLimit($sender, 10)) {
     exit;
 }
 
+// Whitelist nomor - hanya 6282255623881 yang bisa menggunakan bot
+$whitelistNumbers = ['6282255623881'];
+if (!in_array($sender, $whitelistNumbers)) {
+    echo json_encode(['status' => true, 'message' => 'Access denied']);
+    exit;
+}
+
 // Skip pesan dari group (optional - bisa dihapus jika mau support group)
 if (strpos($sender, '@g.us') !== false) {
     echo json_encode(['status' => true, 'message' => 'Group message skipped']);

@@ -259,9 +259,29 @@ bantuan                         (tampilkan panduan ini)
 - Extensions: PDO, cURL, zip
 - Composer
 
+## 🔒 Keamanan
+
+Bot dilindungi dengan whitelist nomor WhatsApp. Hanya nomor yang terdaftar di `webhook.php` yang dapat mengakses bot. Percakapan dari nomor lain akan diabaikan tanpa respon.
+
+### Mengubah Nomor Whitelist
+
+Edit file `webhook.php` pada baris 89:
+```php
+$whitelistNumbers = ['6282255623881'];  // Ubah ke nomor kamu
+```
+
+Untuk multiple nomor:
+```php
+$whitelistNumbers = ['6282255623881', '62812345678', '62898765432'];
+```
+
 ## Changelog
 
-### v2.1 (Current - Feb 2026)
+### v2.2 (Current - Feb 2026)
+- 🔒 Whitelist nomor: hanya nomor terdaftar yang bisa mengakses bot
+- 🤐 Silent fail: pesan tidak valid tidak mendapat respon
+
+### v2.1 (Feb 2026)
 - ✨ Multi-date expense input: catat pengeluaran untuk tanggal lampau (format ddmmyy)
 - ✨ Direct save: pengeluaran langsung tersimpan tanpa konfirmasi y/n
 - 🔧 Fix: respons "Total hari ini" → "Total" ketika tanggal spesifik digunakan
@@ -288,4 +308,4 @@ Private Project
 
 **Created**: Feb 2026  
 **Status**: Active Development  
-**Last Updated**: 09 Feb 2026
+**Last Updated**: 10 Feb 2026
