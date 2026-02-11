@@ -23,14 +23,15 @@ jobs:
         ssh-keyscan -p ${{ secrets.SSH_PORT }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || \
         ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
         
-    - name: Deploy via Git Pull
+    - name: Deploy via Force Sync
       run: |
         ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
           "cd ${{ secrets.SSH_DEPLOY_PATH }} && \
            git fetch origin master && \
-           git pull --ff-only origin master && \
-           echo 'Git pull completed successfully'"
+           git reset --hard origin/master && \
+           git clean -fd && \
+           echo 'Deploy sync completed successfully'"
            
     - name: Post-deploy - Install dependencies
       run: |
@@ -42,7 +43,7 @@ jobs:
       run: |
         ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-          "cd ${{ secrets.SSH_DEPLOY_PATH }} && chmod -R 755 . && touch error.log && chmod 664 error.log 2>/dev/null || true"
+          "cd ${{ secrets.SSH_DEPLOY_PATH }} && touch error.log && chmod 664 error.log 2>/dev/null || true"
           
     - name: Deployment complete
       run: echo "✅ Deployment to ${{ secrets.SSH_HOST }} completed successfully!"
