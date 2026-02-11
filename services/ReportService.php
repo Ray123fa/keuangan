@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
  * ReportService - Generate laporan dan upload ke File.io
  */
@@ -97,16 +98,17 @@ class ReportService
             'file' => new CURLFile($filePath, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', basename($filePath))
         ];
 
-        curl_setopt_array($curl, [
+        $curlOptions = [
             CURLOPT_URL => 'https://tmpfiles.org/api/v1/upload',
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 60,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $postFields,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
             CURLOPT_FOLLOWLOCATION => true,
-        ]);
+        ];
+
+        $curlOptions = array_merge($curlOptions, $this->getSslCurlOptions());
+        curl_setopt_array($curl, $curlOptions);
 
         $response = curl_exec($curl);
         $error = curl_error($curl);
@@ -150,16 +152,17 @@ class ReportService
             'file' => new CURLFile($filePath, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', basename($filePath))
         ];
 
-        curl_setopt_array($curl, [
+        $curlOptions = [
             CURLOPT_URL => 'https://0x0.st',
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 60,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $postFields,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
             CURLOPT_FOLLOWLOCATION => true,
-        ]);
+        ];
+
+        $curlOptions = array_merge($curlOptions, $this->getSslCurlOptions());
+        curl_setopt_array($curl, $curlOptions);
 
         $response = curl_exec($curl);
         $error = curl_error($curl);
@@ -302,5 +305,20 @@ class ReportService
             default:
                 return ucfirst($period);
         }
+    }
+
+    private function getSslCurlOptions(): array
+    {
+        if (APP_ENV === 'production') {
+            return [
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
+            ];
+        }
+
+        return [
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+        ];
     }
 }

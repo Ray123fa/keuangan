@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
  * Database Connection (PDO)
  */
@@ -14,8 +15,9 @@ class Database
         if (self::$instance === null) {
             try {
                 $dsn = sprintf(
-                    'mysql:host=%s;dbname=%s;charset=%s',
+                    'mysql:host=%s;port=%d;dbname=%s;charset=%s',
                     DB_HOST,
+                    (int) DB_PORT,
                     DB_NAME,
                     DB_CHARSET
                 );

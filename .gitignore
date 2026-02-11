@@ -10,7 +10,6 @@ config_local.php
 
 # Dependencies
 /vendor/
-composer.lock
 
 # IDE & Editor
 .vscode/

@@ -1,26 +1,29 @@
-# Deny access to sensitive files
-<FilesMatch "\.(php|sql|log|json)$">
-    # Allow webhook.php only
-</FilesMatch>
+# Disable directory listing
+Options -Indexes
 
-# Deny access to config and database files
-<FilesMatch "^(config|database|schema|composer|error)">
-    Order Allow,Deny
-    Deny from all
-</FilesMatch>
-
-# Deny access to directories
-<IfModule mod_autoindex.c>
-    Options -Indexes
-</IfModule>
-
-# Deny access to hidden files
+# Block hidden files and folders (.env, .git, etc.)
 <FilesMatch "^\.">
-    Order Allow,Deny
-    Deny from all
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order Allow,Deny
+        Deny from all
+    </IfModule>
 </FilesMatch>
 
-# Deny access to vendor directory
+# Block access to sensitive root files
+<FilesMatch "^(config\.php|database\.php|schema\.sql|composer\.(json|lock)|error\.log|README\.md)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order Allow,Deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Block internal directories from direct web access
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule ^vendor/ - [F,L]
@@ -33,10 +36,10 @@
 <IfModule mod_headers.c>
     Header set X-Content-Type-Options "nosniff"
     Header set X-Frame-Options "DENY"
-    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "no-referrer"
 </IfModule>
 
-# PHP settings (jika diizinkan)
+# PHP settings (if allowed by host)
 <IfModule mod_php.c>
     php_flag display_errors off
     php_flag log_errors on

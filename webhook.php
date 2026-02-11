@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
  * Webhook Endpoint untuk Fonnte
  * 
@@ -29,7 +30,7 @@ function checkRateLimit(string $sender, int $maxPerMinute = 10): bool
     $requests = [];
     if (file_exists($lockFile)) {
         $data = json_decode(file_get_contents($lockFile), true);
-        if ($data && is_array($data['timestamps'])) {
+        if (is_array($data) && isset($data['timestamps']) && is_array($data['timestamps'])) {
             $requests = array_filter($data['timestamps'], function($t) use ($oneMinuteAgo) {
                 return $t > $oneMinuteAgo;
             });
@@ -48,14 +49,42 @@ function checkRateLimit(string $sender, int $maxPerMinute = 10): bool
     return true;
 }
 
+function parseWhitelistNumbers(string $csv): array
+{
+    $numbers = array_map('trim', explode(',', $csv));
+    $numbers = array_values(array_filter($numbers, static function (string $number): bool {
+        return $number !== '';
+    }));
+
+    return array_unique($numbers);
+}
+
+function sanitizeWebhookLog(array $data): string
+{
+    $safe = $data;
+
+    if (isset($safe['message']) && is_string($safe['message'])) {
+        $safe['message_preview'] = substr($safe['message'], 0, 120);
+        unset($safe['message']);
+    }
+
+    if (isset($safe['sender']) && is_string($safe['sender'])) {
+        $safe['sender'] = substr($safe['sender'], 0, 4) . '***';
+    }
+
+    $encoded = json_encode($safe, JSON_UNESCAPED_UNICODE);
+    return $encoded === false ? '{}' : $encoded;
+}
+
 // Log incoming request (hanya jika APP_DEBUG=true)
 $rawInput = file_get_contents('php://input');
-if (APP_DEBUG) {
-    error_log('Webhook received: ' . $rawInput);
-}
 
 // Parse JSON input
 $data = json_decode($rawInput, true);
+
+if (APP_DEBUG && is_array($data)) {
+    error_log('Webhook received: ' . sanitizeWebhookLog($data));
+}
 
 // Validasi data
 if (!$data) {
@@ -85,8 +114,13 @@ if (!checkRateLimit($sender, 10)) {
     exit;
 }
 
-// Whitelist nomor - hanya 6282255623881 yang bisa menggunakan bot
-$whitelistNumbers = ['6282255623881'];
+// Whitelist nomor dari environment variable WHITELIST_NUMBERS
+$whitelistNumbers = parseWhitelistNumbers(WHITELIST_NUMBERS);
+if (empty($whitelistNumbers)) {
+    error_log('WARNING: WHITELIST_NUMBERS is empty. Falling back to default hardcoded number.');
+    $whitelistNumbers = ['6282255623881'];
+}
+
 if (!in_array($sender, $whitelistNumbers)) {
     echo json_encode(['status' => true, 'message' => 'Access denied']);
     exit;

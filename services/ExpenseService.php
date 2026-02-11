@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
  * ExpenseService - CRUD operasi untuk pengeluaran
  */
@@ -264,6 +265,15 @@ class ExpenseService
         $sql = "SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE DATE(created_at) = CURDATE()";
         $stmt = $this->db->query($sql);
         $result = $stmt->fetch();
+        return (float) $result['total'];
+    }
+
+    public function getTotalByDate(string $date): float
+    {
+        $stmt = $this->db->prepare('SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE DATE(created_at) = ?');
+        $stmt->execute([$date]);
+        $result = $stmt->fetch();
+
         return (float) $result['total'];
     }
 

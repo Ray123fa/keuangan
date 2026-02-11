@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 /**
  * Konfigurasi Chatbot Keuangan WhatsApp
@@ -16,7 +17,7 @@ define('CONFIG_LOADED', true);
 // LOAD ENVIRONMENT VARIABLES FROM .ENV
 // ============================================
 
-function loadEnv($filePath) {
+function loadEnv(string $filePath): void {
     if (!file_exists($filePath)) {
         throw new Exception("File .env tidak ditemukan di: $filePath");
     }
@@ -57,10 +58,23 @@ if (file_exists($envPath)) {
 // GET ENV VARIABLE DENGAN DEFAULT FALLBACK
 // ============================================
 
-if (!function_exists('getEnv')) {
-    function getEnv($key, $default = null) {
+if (!function_exists('envValue')) {
+    function envValue(string $key, ?string $default = null): ?string {
         $value = getenv($key);
         return $value !== false ? $value : $default;
+    }
+}
+
+if (!function_exists('envBool')) {
+    function envBool(string $key, bool $default = false): bool {
+        $value = getenv($key);
+
+        if ($value === false) {
+            return $default;
+        }
+
+        $normalized = strtolower(trim((string) $value));
+        return in_array($normalized, ['1', 'true', 'yes', 'on'], true);
     }
 }
 
@@ -68,18 +82,18 @@ if (!function_exists('getEnv')) {
 // DATABASE CONFIGURATION
 // ============================================
 
-define('DB_HOST', getEnv('DB_HOST', 'localhost'));
-define('DB_PORT', getEnv('DB_PORT', '3306'));
-define('DB_NAME', getEnv('DB_NAME', 'keuangan_db'));
-define('DB_USER', getEnv('DB_USER', 'root'));
-define('DB_PASS', getEnv('DB_PASS', 'root'));
+define('DB_HOST', envValue('DB_HOST', 'localhost'));
+define('DB_PORT', envValue('DB_PORT', '3306'));
+define('DB_NAME', envValue('DB_NAME', 'keuangan_db'));
+define('DB_USER', envValue('DB_USER', 'root'));
+define('DB_PASS', envValue('DB_PASS', 'root'));
 define('DB_CHARSET', 'utf8mb4');
 
 // ============================================
 // FONNTE API CONFIGURATION
 // ============================================
 
-define('FONNTE_TOKEN', getEnv('FONNTE_TOKEN', ''));
+define('FONNTE_TOKEN', envValue('FONNTE_TOKEN', ''));
 
 // Validate Fonnte token
 if (empty(FONNTE_TOKEN)) {
@@ -90,14 +104,15 @@ if (empty(FONNTE_TOKEN)) {
 // APPLICATION CONFIGURATION
 // ============================================
 
-define('APP_ENV', getEnv('APP_ENV', 'development'));
-define('APP_DEBUG', getEnv('APP_DEBUG', 'true') === 'true');
+define('APP_ENV', envValue('APP_ENV', 'development'));
+define('APP_DEBUG', envBool('APP_DEBUG', true));
+define('WHITELIST_NUMBERS', envValue('WHITELIST_NUMBERS', '6282255623881'));
 
 // ============================================
 // TIMEZONE
 // ============================================
 
-$timezone = getEnv('TIMEZONE', 'Asia/Jakarta');
+$timezone = envValue('TIMEZONE', 'Asia/Jakarta');
 date_default_timezone_set($timezone);
 
 // ============================================
@@ -124,4 +139,3 @@ define('SESSION_EXPIRY_MINUTES', 5);
 
 // File upload timeout (seconds)
 define('FILE_UPLOAD_TIMEOUT', 60);
-

@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
  * MessageHandler - Handle dan route incoming messages dari WhatsApp
  */
@@ -127,7 +128,9 @@ class MessageHandler
         }
 
         // Build response message
-        $todayTotal = $this->expense->getTodayTotal();
+        $contextTotal = $date === null
+            ? $this->expense->getTodayTotal()
+            : $this->expense->getTotalByDate($date);
 
         if ($savedCount === 1) {
             $message = "Tercatat: " . ltrim($savedLines[0], '- ');
@@ -138,7 +141,7 @@ class MessageHandler
 
         // Add quick stats
         $label = ($date === null) ? "Total hari ini" : "Total";
-        $message .= sprintf("\n\n%s: Rp%s", $label, number_format($todayTotal, 0, ',', '.'));
+        $message .= sprintf("\n\n%s: Rp%s", $label, number_format($contextTotal, 0, ',', '.'));
 
         $this->fonnte->sendMessage($sender, $message);
     }
@@ -157,6 +160,7 @@ class MessageHandler
 
         $allSavedLines = [];
         $totalTransactions = 0;
+        $totalsByDate = [];
 
         foreach ($expensesByDate as $date => $expenses) {
             // Validasi kategori untuk expenses di tanggal ini
@@ -213,6 +217,8 @@ class MessageHandler
                 foreach ($dateLines as $line) {
                     $allSavedLines[] = "  {$line}";
                 }
+
+                $totalsByDate[] = "  Total {$displayDate}: Rp" . number_format($this->expense->getTotalByDate($date), 0, ',', '.');
             }
         }
 
@@ -221,12 +227,12 @@ class MessageHandler
             return;
         }
 
-        // Build response message
-        $todayTotal = $this->expense->getTodayTotal();
-
         $message = "Tersimpan {$totalTransactions} transaksi:\n\n";
         $message .= implode("\n", $allSavedLines);
-        $message .= sprintf("\n\nTotal: Rp%s", number_format($todayTotal, 0, ',', '.'));
+
+        if (!empty($totalsByDate)) {
+            $message .= "\n\n" . implode("\n", $totalsByDate);
+        }
 
         $this->fonnte->sendMessage($sender, $message);
     }

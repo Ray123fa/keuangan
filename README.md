@@ -39,7 +39,7 @@ keuangan/
 │   ├── FonnteService.php   # Send messages via Fonnte API
 │   ├── ExpenseService.php  # CRUD expenses, stats, comparison
 │   ├── ReportService.php   # Generate & upload Excel reports
-│   └── SessionService.py   # Pending expenses + confirmation
+│   └── (tidak ada session service terpisah)
 ├── utils/
 │   ├── Parser.php          # Parse commands, expenses, custom periods
 │   └── ExcelGenerator.php  # Generate Excel files (2 sheets)
@@ -92,6 +92,9 @@ DB_PASS=root
 
 # Fonnte (dapatkan dari dashboard Fonnte)
 FONNTE_TOKEN=your_token_here
+
+# Whitelist (pisahkan dengan koma)
+WHITELIST_NUMBERS=6282255623881
 
 # Timezone
 TIMEZONE=Asia/Jakarta
@@ -261,18 +264,18 @@ bantuan                         (tampilkan panduan ini)
 
 ## 🔒 Keamanan
 
-Bot dilindungi dengan whitelist nomor WhatsApp. Hanya nomor yang terdaftar di `webhook.php` yang dapat mengakses bot. Percakapan dari nomor lain akan diabaikan tanpa respon.
+Bot dilindungi dengan whitelist nomor WhatsApp. Hanya nomor yang terdaftar di variabel `.env` `WHITELIST_NUMBERS` yang dapat mengakses bot. Percakapan dari nomor lain akan diabaikan tanpa respon.
 
 ### Mengubah Nomor Whitelist
 
-Edit file `webhook.php` pada baris 89:
-```php
-$whitelistNumbers = ['6282255623881'];  // Ubah ke nomor kamu
+Edit file `.env`:
+```env
+WHITELIST_NUMBERS=6282255623881
 ```
 
 Untuk multiple nomor:
-```php
-$whitelistNumbers = ['6282255623881', '62812345678', '62898765432'];
+```env
+WHITELIST_NUMBERS=6282255623881,62812345678,62898765432
 ```
 
 ## Changelog
