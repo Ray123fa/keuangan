@@ -53,30 +53,15 @@ jobs:
 
       - name: Deploy code
         run: |
-          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
-            set -e
-            cd '$SSH_DEPLOY_PATH'
-            git fetch origin master
-            git reset --hard origin/master
-            git clean -fd
-          "
+          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "bash -lc 'set -e; cd \"$SSH_DEPLOY_PATH\"; git fetch origin master; git reset --hard origin/master; git clean -fd'"
 
       - name: Install production dependencies
         run: |
-          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
-            set -e
-            cd '$SSH_DEPLOY_PATH'
-            composer install --no-dev --optimize-autoloader --no-interaction
-          "
+          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "bash -lc 'set -e; cd \"$SSH_DEPLOY_PATH\"; composer install --no-dev --optimize-autoloader --no-interaction'"
 
       - name: Ensure runtime permissions
         run: |
-          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
-            set -e
-            cd '$SSH_DEPLOY_PATH'
-            touch error.log
-            chmod 664 error.log
-          "
+          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "bash -lc 'set -e; cd \"$SSH_DEPLOY_PATH\"; touch error.log; chmod 664 error.log'"
 
       - name: Deployment complete
         run: echo "Deployment to $SSH_HOST completed successfully."
