@@ -24,6 +24,24 @@ function printUsage(): void
     echo "  php artisan migrate:status\n";
     echo "  php artisan db:seed\n";
     echo "  php artisan db:seed --class=CategorySeeder\n";
+    echo "  php artisan serve\n";
+}
+
+function serve(): int
+{
+    $documentRoot = __DIR__ . '/public';
+    if (!is_dir($documentRoot)) {
+        throw new RuntimeException('Folder public tidak ditemukan: ' . $documentRoot);
+    }
+
+    $phpBinary = escapeshellarg(PHP_BINARY);
+    $target = escapeshellarg($documentRoot);
+    $command = $phpBinary . ' -S localhost:8000 -t ' . $target;
+
+    fwrite(STDOUT, "Starting development server on http://localhost:8000\n");
+    passthru($command, $exitCode);
+
+    return (int) $exitCode;
 }
 
 function pdoOptions(): array
@@ -225,6 +243,9 @@ try {
             $seederClass = getOptionValue($args, '--class');
             $seederRunner->seed($seederClass);
             break;
+
+        case 'serve':
+            exit(serve());
 
         default:
             throw new InvalidArgumentException("Command tidak dikenal: {$command}");
