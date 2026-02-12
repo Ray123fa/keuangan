@@ -1,13 +1,15 @@
 <?php
 declare(strict_types=1);
+
+namespace App\Application\Handlers;
 /**
  * MessageHandler - Handle dan route incoming messages dari WhatsApp
  */
 
-require_once __DIR__ . '/../services/FonnteService.php';
-require_once __DIR__ . '/../services/ExpenseService.php';
-require_once __DIR__ . '/../services/ReportService.php';
-require_once __DIR__ . '/../utils/Parser.php';
+use App\Application\Services\ExpenseService;
+use App\Application\Services\FonnteService;
+use App\Application\Services\ReportService;
+use App\Domain\Parsers\Parser;
 
 class MessageHandler
 {
@@ -582,24 +584,17 @@ class MessageHandler
     {
         $categories = $this->expense->getAllCategories();
 
-        $message = "Daftar Kategori:\n";
-        
-        $preset = [];
-        $custom = [];
-        
-        foreach ($categories as $cat) {
-            if ($cat['is_custom']) {
-                $custom[] = $cat['name'];
-            } else {
-                $preset[] = $cat['name'];
-            }
+        if (empty($categories)) {
+            $this->fonnte->sendMessage($sender, "Belum ada kategori.\n\nUntuk menambah kategori:\ntambah kategori <nama>");
+            return;
         }
 
-        $message .= "\nDefault: " . implode(', ', $preset);
-        
-        if (!empty($custom)) {
-            $message .= "\nCustom: " . implode(', ', $custom);
-        }
+        $names = array_map(
+            static fn(array $cat): string => (string) ($cat['name'] ?? ''),
+            $categories
+        );
+
+        $message = "Daftar Kategori:\n- " . implode("\n- ", $names);
 
         $message .= "\n\nUntuk menambah kategori:\ntambah kategori <nama>";
 

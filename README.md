@@ -2,7 +2,7 @@
 
 Bot WhatsApp untuk tracking pengeluaran harian dengan fitur laporan Excel, ringkasan per kategori, dan perbandingan periode.
 
-Teknologi: **PHP + MySQL + Fonnte API + PhpSpreadsheet**
+Teknologi: **PHP 8.1+ + MySQL + Fonnte API + PhpSpreadsheet + Google OAuth + TailwindCSS + Alpine.js**
 
 ## ✨ Fitur Utama
 
@@ -23,33 +23,40 @@ Teknologi: **PHP + MySQL + Fonnte API + PhpSpreadsheet**
 
 ```
 keuangan/
-├── config.php              # Konfigurasi global (DB, Fonnte, timezone)
+├── public/                 # Front controller web (MVC)
+│   ├── index.php
+│   └── .htaccess
+├── src/                    # App source code (MVC + PSR-4)
+│   ├── Bootstrap/
+│   ├── Core/
+│   ├── Controllers/
+│   ├── Application/
+│   ├── Infrastructure/
+│   ├── Repositories/
+│   └── Services/
+├── views/                  # Template server-rendered admin
+├── storage/                # Log aplikasi
+├── config.php              # Konfigurasi global (DB, env, logging)
 ├── database.php            # PDO connection singleton
-├── webhook.php             # Entry point webhook Fonnte
 ├── schema.sql              # Database schema
 ├── composer.json           # Dependencies
 ├── README.md               # Dokumentasi ini
 ├── .env                    # Environment lokal (git ignored ⚠️)
 ├── .env.example            # Template environment
 ├── .gitignore              # Git ignore rules
-│
-├── handlers/
-│   └── MessageHandler.php  # Route & handle incoming messages
-├── services/
-│   ├── FonnteService.php   # Send messages via Fonnte API
-│   ├── ExpenseService.php  # CRUD expenses, stats, comparison
-│   ├── ReportService.php   # Generate & upload Excel reports
-│   └── (tidak ada session service terpisah)
-├── utils/
-│   ├── Parser.php          # Parse commands, expenses, custom periods
-│   └── ExcelGenerator.php  # Generate Excel files (2 sheets)
 └── vendor/                 # Composer dependencies (git ignored)
+```
+
+### Status Migrasi MVC (2 Fase)
+
+- **Fase 1 (selesai):** Front controller + routing + controller admin/webhook sudah PSR-4 di `src/`.
+- **Fase 2 (selesai):** Class legacy bot sudah dipindahkan penuh ke namespace `src/Application`, `src/Domain`, `src/Infrastructure`.
 
 ## 🚀 Setup Lokal (Development)
 
 ### Requirements
 
-- PHP 7.4+
+- PHP 8.1+
 - MySQL/MariaDB 5.7+
 - Composer
 - ngrok (untuk expose lokal ke public)
@@ -67,18 +74,57 @@ composer install
 # 3. Setup database
 mysql -u root -p keuangan_db < schema.sql
 
+# Optional: generate migration file baru (ala Laravel)
+php artisan make:migration create_sample_table
+
+# Jalankan migration pending
+php artisan migrate
+
 # 4. Setup environment
 cp .env.example .env
 # Edit .env dengan kredensial lokal kamu
 nano .env
 
-# 5. Start PHP server
-php -S localhost:8000
+# 5. Start local server
+php -S localhost:8000 -t public
 
 # 6. Di terminal lain, expose ke public
 ngrok http 8000
 # Copy ngrok URL: https://xxx.ngrok.io
 ```
+
+### Database Migration Command (Custom Artisan)
+
+Project ini menyediakan command migration mirip Laravel lewat file `artisan` custom.
+
+```bash
+php artisan make:migration create_expenses_archive_table
+php artisan make:seeder CategorySeeder
+php artisan migrate
+php artisan migrate --seed
+php artisan migrate:fresh
+php artisan migrate:fresh --seed --force
+php artisan migrate:status
+php artisan migrate:rollback
+php artisan db:seed
+php artisan db:seed --class=CategorySeeder
+php artisan db:seed --class=CategoryFromBackupSeeder
+php artisan db:seed --class=ExpenseFromBackupSeeder
+```
+
+Jika `APP_ENV=production`, command `migrate:fresh` akan meminta konfirmasi interaktif sebelum mengeksekusi drop semua tabel. Untuk mode non-interactive (misalnya CI), gunakan `--force`.
+
+```bash
+php artisan migrate:fresh --force
+```
+
+Setiap migration file akan dibuat di `database/migrations` dengan format timestamp, dan status eksekusi disimpan di tabel `migrations`.
+
+Khusus command database (`migrate`, `migrate:fresh`, `migrate:rollback`, `migrate:status`, `db:seed`), jika database dari `.env` belum ada maka `artisan` akan otomatis membuat database tersebut terlebih dulu.
+
+Seeder file dibuat di `database/seeders`. Default `php artisan db:seed` akan menjalankan `DatabaseSeeder.php`, dan kamu bisa jalankan seeder spesifik dengan `--class=NamaSeeder`.
+
+Seeder default saat ini memuat data dari backup untuk tabel `categories` dan `expenses` (tanpa data admin), dengan pola idempotent `ON DUPLICATE KEY UPDATE`.
 
 ### Konfigurasi .env
 
@@ -104,9 +150,43 @@ TIMEZONE=Asia/Jakarta
 
 Di dashboard Fonnte:
 1. Pilih device → Edit
-2. Webhook URL: `https://ngrok-url/webhook.php`
+2. Webhook URL: `https://ngrok-url/webhook`
 3. Aktifkan "Auto Read" = ON
 4. Save
+
+## 🖥️ Admin Interface (MVC)
+
+Interface admin tersedia di `https://keuangan.rayfa.my.id/admin`.
+
+### Konfigurasi Google OAuth
+
+Tambahkan di `.env`:
+
+```env
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_REDIRECT_URI=https://keuangan.rayfa.my.id/admin/auth/google/callback
+ADMIN_ALLOWED_EMAILS=admin@email.com
+```
+
+Di Google Cloud Console (OAuth Web App), daftarkan redirect URI:
+
+```text
+https://keuangan.rayfa.my.id/admin/auth/google/callback
+http://localhost:8000/admin/auth/google/callback
+```
+
+### Akses Login
+
+- Buka `/admin/login`
+- Klik `Masuk dengan Google`
+- Hanya email yang ada di `ADMIN_ALLOWED_EMAILS` yang diizinkan masuk
+
+### Catatan FlyEnv + Apache (Windows)
+
+- Disarankan arahkan `DocumentRoot` ke folder `public`.
+- Pastikan `mod_rewrite` aktif dan `AllowOverride All` untuk project.
+- Jika `DocumentRoot` masih di root project, `.htaccess` root tetap me-rewrite request ke `public/index.php`.
 
 ### Test
 
@@ -257,7 +337,7 @@ bantuan                         (tampilkan panduan ini)
 
 ## Requirements
 
-- PHP 7.4+
+- PHP 8.1+
 - MySQL 5.7+ atau MariaDB 10+
 - Extensions: PDO, cURL, zip
 - Composer

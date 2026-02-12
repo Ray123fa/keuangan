@@ -1,46 +1,23 @@
-# Disable directory listing
-Options -Indexes
-
-# Block hidden files and folders (.env, .git, etc.)
-<FilesMatch "^\.">
-    <IfModule mod_authz_core.c>
-        Require all denied
-    </IfModule>
-    <IfModule !mod_authz_core.c>
-        Order Allow,Deny
-        Deny from all
-    </IfModule>
-</FilesMatch>
-
-# Block access to sensitive root files
-<FilesMatch "^(config\.php|database\.php|schema\.sql|composer\.(json|lock)|error\.log|README\.md)$">
-    <IfModule mod_authz_core.c>
-        Require all denied
-    </IfModule>
-    <IfModule !mod_authz_core.c>
-        Order Allow,Deny
-        Deny from all
-    </IfModule>
-</FilesMatch>
-
-# Block internal directories from direct web access
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    RewriteRule (^|/)\. - [F,L]
     RewriteRule ^vendor/ - [F,L]
-    RewriteRule ^services/ - [F,L]
-    RewriteRule ^handlers/ - [F,L]
-    RewriteRule ^utils/ - [F,L]
+    RewriteRule ^storage/ - [F,L]
+
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    RewriteRule ^ public/index.php [L,QSA]
 </IfModule>
 
-# Security headers
-<IfModule mod_headers.c>
-    Header set X-Content-Type-Options "nosniff"
-    Header set X-Frame-Options "DENY"
-    Header set Referrer-Policy "no-referrer"
-</IfModule>
-
-# PHP settings (if allowed by host)
-<IfModule mod_php.c>
-    php_flag display_errors off
-    php_flag log_errors on
-</IfModule>
+<FilesMatch "^(config\.php|database\.php|schema\.sql|composer\.(json|lock)|README\.md|error\.log)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order Allow,Deny
+        Deny from all
+    </IfModule>
+</FilesMatch>

@@ -1,9 +1,10 @@
 <?php
+declare(strict_types=1);
+
+namespace App\Infrastructure\Reporting;
 /**
  * ExcelGenerator - Generate file Excel untuk laporan
  */
-
-require_once __DIR__ . '/../vendor/autoload.php';
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -11,6 +12,7 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use Exception;
 
 class ExcelGenerator
 {

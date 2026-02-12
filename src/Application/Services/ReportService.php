@@ -1,12 +1,13 @@
 <?php
 declare(strict_types=1);
+
+namespace App\Application\Services;
 /**
  * ReportService - Generate laporan dan upload ke File.io
  */
 
-require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/ExpenseService.php';
-require_once __DIR__ . '/../utils/ExcelGenerator.php';
+use App\Infrastructure\Reporting\ExcelGenerator;
+use CURLFile;
 
 class ReportService
 {
