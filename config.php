@@ -139,17 +139,8 @@ ini_set('error_log', $logDirectory . '/app.log');
 // CONSTANTS
 // ============================================
 
-// Session idle timeout (minutes)
-define('SESSION_IDLE_TIMEOUT_MINUTES', max(1, (int) envValue('SESSION_IDLE_TIMEOUT_MINUTES', '30')));
-
-// Session absolute timeout (minutes)
-define('SESSION_ABSOLUTE_TIMEOUT_MINUTES', max(
-    SESSION_IDLE_TIMEOUT_MINUTES,
-    (int) envValue('SESSION_ABSOLUTE_TIMEOUT_MINUTES', '720')
-));
-
-// Backward compatibility for older usage
-define('SESSION_EXPIRY_MINUTES', SESSION_IDLE_TIMEOUT_MINUTES);
+// Session expiry time (minutes)
+define('SESSION_EXPIRY_MINUTES', 5);
 
 // File upload timeout (seconds)
 define('FILE_UPLOAD_TIMEOUT', 60);

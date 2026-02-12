@@ -167,10 +167,6 @@ GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 GOOGLE_REDIRECT_URI=https://keuangan.rayfa.my.id/admin/auth/google/callback
 ADMIN_ALLOWED_EMAILS=admin@email.com
-
-# Session admin
-SESSION_IDLE_TIMEOUT_MINUTES=30
-SESSION_ABSOLUTE_TIMEOUT_MINUTES=720
 ```
 
 Di Google Cloud Console (OAuth Web App), daftarkan redirect URI:
@@ -185,8 +181,6 @@ http://localhost:8000/admin/auth/google/callback
 - Buka `/admin/login`
 - Klik `Masuk dengan Google`
 - Hanya email yang ada di `ADMIN_ALLOWED_EMAILS` yang diizinkan masuk
-- Session admin akan expired jika idle selama `SESSION_IDLE_TIMEOUT_MINUTES`
-- Session admin juga punya batas maksimum `SESSION_ABSOLUTE_TIMEOUT_MINUTES` sejak login
 
 ### Catatan FlyEnv + Apache (Windows)
 
