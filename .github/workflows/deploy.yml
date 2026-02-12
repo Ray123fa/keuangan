@@ -4,46 +4,79 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-master
+  cancel-in-progress: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 20
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_PORT: ${{ secrets.SSH_PORT }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_DEPLOY_PATH: ${{ secrets.SSH_DEPLOY_PATH }}
+
     steps:
-    - name: Setup SSH
-      uses: shimataro/ssh-key-action@v2
-      with:
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
-        if_key_exists: replace
-        
-    - name: Add server to known_hosts
-      run: |
-        mkdir -p ~/.ssh
-        ssh-keyscan -p ${{ secrets.SSH_PORT }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || \
-        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
-        
-    - name: Deploy via Force Sync
-      run: |
-        ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
-          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-          "cd ${{ secrets.SSH_DEPLOY_PATH }} && \
-           git fetch origin master && \
-           git reset --hard origin/master && \
-           git clean -fd && \
-           echo 'Deploy sync completed successfully'"
-           
-    - name: Post-deploy - Install dependencies
-      run: |
-        ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
-          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-          "cd ${{ secrets.SSH_DEPLOY_PATH }} && composer install --no-dev --optimize-autoloader 2>&1 || echo 'Composer install skipped or failed'"
-          
-    - name: Post-deploy - Set permissions
-      run: |
-        ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no \
-          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-          "cd ${{ secrets.SSH_DEPLOY_PATH }} && touch error.log && chmod 664 error.log 2>/dev/null || true"
-          
-    - name: Deployment complete
-      run: echo "✅ Deployment to ${{ secrets.SSH_HOST }} completed successfully!"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+
+      - name: Validate basic runtime files
+        run: |
+          php -l artisan
+          php -l src/Console/MigrationRunner.php
+          php -l src/Console/SeederRunner.php
+
+      - name: Setup SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+          if_key_exists: replace
+
+      - name: Ensure host key exists
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || \
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy code
+        run: |
+          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
+            set -e
+            cd '$SSH_DEPLOY_PATH'
+            git fetch origin master
+            git reset --hard origin/master
+            git clean -fd
+          "
+
+      - name: Install production dependencies
+        run: |
+          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
+            set -e
+            cd '$SSH_DEPLOY_PATH'
+            composer install --no-dev --optimize-autoloader --no-interaction
+          "
+
+      - name: Ensure runtime permissions
+        run: |
+          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
+            set -e
+            cd '$SSH_DEPLOY_PATH'
+            touch error.log
+            chmod 664 error.log
+          "
+
+      - name: Deployment complete
+        run: echo "Deployment to $SSH_HOST completed successfully."

@@ -1,9 +1,10 @@
 <?php
+declare(strict_types=1);
+
+namespace App\Application\Services;
 /**
  * FonnteService - Mengirim pesan ke WhatsApp via Fonnte API
  */
-
-require_once __DIR__ . '/../config.php';
 
 class FonnteService
 {

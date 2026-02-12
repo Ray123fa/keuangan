@@ -128,7 +128,12 @@ if (APP_DEBUG) {
 }
 
 ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/error.log');
+$logDirectory = __DIR__ . '/storage/logs';
+if (!is_dir($logDirectory)) {
+    mkdir($logDirectory, 0755, true);
+}
+
+ini_set('error_log', $logDirectory . '/app.log');
 
 // ============================================
 // CONSTANTS

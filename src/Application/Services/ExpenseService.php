@@ -1,10 +1,14 @@
 <?php
 declare(strict_types=1);
+
+namespace App\Application\Services;
 /**
  * ExpenseService - CRUD operasi untuk pengeluaran
  */
 
-require_once __DIR__ . '/../database.php';
+use App\Infrastructure\Database\Connection;
+use DateTime;
+use PDO;
 
 class ExpenseService
 {
@@ -12,7 +16,7 @@ class ExpenseService
 
     public function __construct()
     {
-        $this->db = Database::getConnection();
+        $this->db = Connection::get();
     }
 
     /**
@@ -170,7 +174,7 @@ class ExpenseService
      */
     public function getAllCategories(): array
     {
-        $stmt = $this->db->query('SELECT * FROM categories ORDER BY is_custom, name');
+        $stmt = $this->db->query('SELECT * FROM categories ORDER BY name');
         return $stmt->fetchAll();
     }
 
@@ -189,7 +193,7 @@ class ExpenseService
             ];
         }
 
-        $stmt = $this->db->prepare('INSERT INTO categories (name, is_custom) VALUES (?, 1)');
+        $stmt = $this->db->prepare('INSERT INTO categories (name) VALUES (?)');
         $stmt->execute([$name]);
 
         return [
