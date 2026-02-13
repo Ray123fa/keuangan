@@ -126,6 +126,10 @@ $navItems = [
             box-shadow: 0 12px 30px -20px rgba(29, 35, 31, 0.4);
         }
 
+        .choices__list--dropdown.is-fixed-pos {
+            position: fixed;
+        }
+
         .choices__item--choice.is-highlighted {
             background: var(--accent-soft);
             color: var(--accent);
