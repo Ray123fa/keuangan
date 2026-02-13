@@ -8,6 +8,25 @@ $filters = is_array($filters ?? null) ? $filters : [];
 $selectedCategoryId = (int) ($filters['category_id'] ?? 0);
 $startDateFilter = (string) ($filters['start_date'] ?? '');
 $endDateFilter = (string) ($filters['end_date'] ?? '');
+$currentYear = (int) date('Y');
+$currentMonth = (int) date('n');
+$exportStartDateDefault = $startDateFilter !== '' ? $startDateFilter : date('Y-m-01');
+$exportEndDateDefault = $endDateFilter !== '' ? $endDateFilter : date('Y-m-d');
+
+$monthOptions = [
+    1 => 'Januari',
+    2 => 'Februari',
+    3 => 'Maret',
+    4 => 'April',
+    5 => 'Mei',
+    6 => 'Juni',
+    7 => 'Juli',
+    8 => 'Agustus',
+    9 => 'September',
+    10 => 'Oktober',
+    11 => 'November',
+    12 => 'Desember',
+];
 
 $pagination = is_array($pagination ?? null) ? $pagination : [];
 $currentPage = max(1, (int) ($pagination['current_page'] ?? 1));
@@ -30,19 +49,29 @@ $buildExpensePageUrl = static function (int $page) use ($baseQuery): string {
 ?>
 <section class="space-y-6">
     <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">Manajemen Data</p>
-            <h1 class="brand-display mt-1 text-3xl leading-tight text-[var(--ink)] sm:text-4xl">CRUD Pengeluaran</h1>
-            <p class="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">Input tanggal dari admin disimpan sebagai awal hari (`00:00:00`) untuk menjaga konsistensi data historis.</p>
-        </div>
-        <button
-            type="button"
-            onclick="expenseModal.openCreate()"
-            class="focus-ring inline-flex w-full items-center justify-center rounded-xl border border-[var(--accent)]/35 bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--accent)] transition hover:-translate-y-0.5 hover:border-[var(--accent)]/65 md:w-auto"
-        >
-            Tambah Pengeluaran
-        </button>
-    </div>
+         <div>
+             <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">Manajemen Data</p>
+             <h1 class="brand-display mt-1 text-3xl leading-tight text-[var(--ink)] sm:text-4xl">CRUD Pengeluaran</h1>
+             <p class="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">Input tanggal dari admin disimpan sebagai awal hari (`00:00:00`) untuk menjaga konsistensi data historis.</p>
+         </div>
+         <div class="flex flex-col gap-2 md:flex-row md:w-auto w-full">
+             <button
+                 type="button"
+                 onclick="expenseModal.openExport()"
+                 class="focus-ring inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-white px-4 py-2 text-sm font-semibold text-[var(--ink)] transition hover:-translate-y-0.5 order-2 md:order-1"
+             >
+                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true"><path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"/><path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"/></svg>
+                 <span>Export</span>
+             </button>
+             <button
+                 type="button"
+                 onclick="expenseModal.openCreate()"
+                 class="focus-ring inline-flex w-full items-center justify-center rounded-xl border border-[var(--accent)]/35 bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--accent)] transition hover:-translate-y-0.5 hover:border-[var(--accent)]/65 order-1 md:order-2 md:w-auto"
+             >
+                 Tambah Pengeluaran
+             </button>
+         </div>
+     </div>
 
     <?php require __DIR__ . '/../partials/flash.php'; ?>
 
@@ -98,9 +127,9 @@ $buildExpensePageUrl = static function (int $page) use ($baseQuery): string {
                 <button type="submit" class="focus-ring rounded-xl border border-[var(--accent)]/35 bg-[var(--surface)] px-3 py-2 text-sm font-semibold text-[var(--accent)]">Terapkan</button>
                 <a href="/admin/expenses" class="focus-ring rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold text-[var(--ink)]">Reset</a>
             </div>
-        </form>
+         </form>
 
-        <div class="mt-5 space-y-3 md:hidden">
+         <div class="mt-5 space-y-3 md:hidden">
             <?php if (empty($expenses)): ?>
                 <div class="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-7 text-center text-sm text-[var(--muted)]">Belum ada data pengeluaran.</div>
             <?php endif; ?>
@@ -1258,6 +1287,225 @@ window.expenseModal = (function () {
         confirmBtn.focus();
     }
 
-    return { openCreate: openCreate, openEdit: openEdit, openDelete: openDelete };
+    /* ---- export modal ---- */
+    function openExport() {
+        var overlay, dialog;
+        function close() { removeModal(overlay, dialog); }
+
+        overlay = createOverlay(close);
+
+        var modeSelect = h('select', {
+            id: 'export-modal-mode',
+            name: 'mode',
+            className: 'focus-ring w-full cursor-pointer rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm text-[var(--ink)]'
+        }, [
+            h('option', { value: 'date_range', selected: true }, ['Rentang tanggal']),
+            h('option', { value: 'monthly' }, ['Bulanan']),
+            h('option', { value: 'yearly' }, ['Tahunan'])
+        ]);
+
+        var fieldStartDate = h('input', {
+            id: 'export-modal-start-date',
+            type: 'date',
+            name: 'start_date',
+            value: '<?= View::escape($exportStartDateDefault) ?>',
+            className: 'focus-ring w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm text-[var(--ink)]'
+        });
+
+        var fieldEndDate = h('input', {
+            id: 'export-modal-end-date',
+            type: 'date',
+            name: 'end_date',
+            value: '<?= View::escape($exportEndDateDefault) ?>',
+            className: 'focus-ring w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm text-[var(--ink)]'
+        });
+
+        var fieldMonth = h('select', {
+            id: 'export-modal-month',
+            name: 'month',
+            className: 'focus-ring w-full cursor-pointer rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm text-[var(--ink)]'
+        }, [
+            <?php foreach ($monthOptions as $monthNumber => $monthLabel): ?>
+            h('option', { value: '<?= $monthNumber ?>', selected: <?= $monthNumber === $currentMonth ? 'true' : 'false' ?> }, ['<?= View::escape($monthLabel) ?>']),
+            <?php endforeach; ?>
+        ].filter(Boolean));
+
+        var fieldMonthYear = h('input', {
+            id: 'export-modal-month-year',
+            type: 'number',
+            name: 'month_year',
+            value: '<?= $currentYear ?>',
+            min: '2000',
+            max: '2100',
+            className: 'focus-ring w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm text-[var(--ink)]'
+        });
+
+        var fieldYearlyYear = h('input', {
+            id: 'export-modal-yearly-year',
+            type: 'number',
+            name: 'yearly_year',
+            value: '<?= $currentYear ?>',
+            min: '2000',
+            max: '2100',
+            className: 'focus-ring w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm text-[var(--ink)]'
+        });
+
+        var fieldContainer = h('div', { id: 'export-modal-fields', className: 'mt-3 grid gap-3' }, [
+            h('div', {}, [
+                h('label', { 'for': 'export-modal-start-date', className: 'mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]' }, ['Tanggal Mulai']),
+                fieldStartDate
+            ]),
+            h('div', {}, [
+                h('label', { 'for': 'export-modal-end-date', className: 'mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]' }, ['Tanggal Akhir']),
+                fieldEndDate
+            ])
+        ]);
+
+        function updateFields() {
+            var mode = modeSelect.value;
+            var newChildren = [];
+
+            if (mode === 'date_range') {
+                newChildren = [
+                    h('div', {}, [
+                        h('label', { 'for': 'export-modal-start-date', className: 'mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]' }, ['Tanggal Mulai']),
+                        fieldStartDate
+                    ]),
+                    h('div', {}, [
+                        h('label', { 'for': 'export-modal-end-date', className: 'mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]' }, ['Tanggal Akhir']),
+                        fieldEndDate
+                    ])
+                ];
+                fieldStartDate.required = true;
+                fieldEndDate.required = true;
+                fieldMonth.required = false;
+                fieldMonthYear.required = false;
+                fieldYearlyYear.required = false;
+            } else if (mode === 'monthly') {
+                newChildren = [
+                    h('div', {}, [
+                        h('label', { 'for': 'export-modal-month', className: 'mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]' }, ['Bulan']),
+                        fieldMonth
+                    ]),
+                    h('div', {}, [
+                        h('label', { 'for': 'export-modal-month-year', className: 'mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]' }, ['Tahun']),
+                        fieldMonthYear
+                    ])
+                ];
+                fieldStartDate.required = false;
+                fieldEndDate.required = false;
+                fieldMonth.required = true;
+                fieldMonthYear.required = true;
+                fieldYearlyYear.required = false;
+            } else if (mode === 'yearly') {
+                newChildren = [
+                    h('div', {}, [
+                        h('label', { 'for': 'export-modal-yearly-year', className: 'mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]' }, ['Tahun']),
+                        fieldYearlyYear
+                    ])
+                ];
+                fieldStartDate.required = false;
+                fieldEndDate.required = false;
+                fieldMonth.required = false;
+                fieldMonthYear.required = false;
+                fieldYearlyYear.required = true;
+            }
+
+            fieldContainer.innerHTML = '';
+            newChildren.forEach(function (child) {
+                fieldContainer.appendChild(child);
+            });
+        }
+
+        modeSelect.addEventListener('change', updateFields);
+
+        var exportSpinner = h('span', {
+            className: 'hidden h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white/90 border-t-transparent',
+            'aria-hidden': 'true'
+        });
+        var exportText = h('span', {}, ['Export Excel']);
+        var exportBtn = h('button', {
+            type: 'submit',
+            className: 'focus-ring inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md'
+        }, [exportSpinner, exportText]);
+
+        function setExportLoading(isLoading) {
+            exportBtn.disabled = isLoading;
+            if (isLoading) {
+                exportBtn.classList.add('opacity-70', 'cursor-not-allowed');
+                exportSpinner.classList.remove('hidden');
+                exportText.textContent = 'Memproses...';
+                return;
+            }
+
+            exportBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+            exportSpinner.classList.add('hidden');
+            exportText.textContent = 'Export Excel';
+        }
+
+        var exportForm = h('form', {
+            method: 'GET',
+            action: '/admin/reports/export',
+            className: 'mt-5 space-y-4'
+        }, [
+            h('div', {}, [
+                h('label', { 'for': 'export-modal-mode', className: 'mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]' }, ['Mode Export']),
+                modeSelect
+            ]),
+            fieldContainer,
+            h('div', { className: 'flex justify-end gap-2 pt-2' }, [
+                h('button', {
+                    type: 'button',
+                    className: 'focus-ring rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold text-[var(--ink)]',
+                    onClick: close
+                }, ['Batal']),
+                exportBtn
+            ])
+        ]);
+
+        exportForm.addEventListener('submit', function (event) {
+            if (exportBtn.disabled) {
+                event.preventDefault();
+                return;
+            }
+
+            setExportLoading(true);
+        });
+
+        dialog = h('div', {
+            className: 'fixed inset-0 z-[9999] flex items-end justify-center px-3 pb-3 pt-6 pointer-events-none sm:items-center sm:px-4 sm:pb-4',
+            role: 'dialog',
+            'aria-modal': 'true',
+            'aria-labelledby': 'export-expense-title'
+        }, [
+            h('div', { className: 'panel relative w-full max-w-md max-h-[88vh] overflow-y-auto rounded-2xl p-5 pointer-events-auto sm:p-6' }, [
+                h('div', { className: 'flex items-start justify-between gap-4' }, [
+                    h('div', {}, [
+                        h('p', { className: 'text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]' }, ['Laporan']),
+                        h('h3', { id: 'export-expense-title', className: 'brand-display mt-1 text-2xl text-[var(--ink)]' }, ['Export Excel'])
+                    ]),
+                    h('button', {
+                        type: 'button',
+                        className: 'focus-ring inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--line)] bg-white text-[var(--muted)]',
+                        'aria-label': 'Tutup modal',
+                        onClick: close
+                    }, [closeIcon()])
+                ]),
+                exportForm
+            ])
+        ]);
+
+        dialog._escHandler = function (e) { if (e.key === 'Escape') close(); };
+        document.addEventListener('keydown', dialog._escHandler);
+
+        document.body.appendChild(overlay);
+        document.body.appendChild(dialog);
+        lockScroll();
+
+        updateFields();
+        modeSelect.focus();
+    }
+
+    return { openCreate: openCreate, openEdit: openEdit, openDelete: openDelete, openExport: openExport };
 })();
 </script>

@@ -69,6 +69,60 @@ final class ExpenseRepository
         return (int) ($stmt->fetchColumn() ?: 0);
     }
 
+    public function findByDateRange(string $startDate, string $endDate): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT e.id, e.category_id, e.amount, e.description, e.created_at, c.name AS category_name
+             FROM expenses e
+             INNER JOIN categories c ON c.id = e.category_id
+             WHERE DATE(e.created_at) BETWEEN :start_date AND :end_date
+             ORDER BY e.created_at DESC, e.id DESC'
+        );
+        $stmt->bindValue(':start_date', $startDate, PDO::PARAM_STR);
+        $stmt->bindValue(':end_date', $endDate, PDO::PARAM_STR);
+        $stmt->execute();
+
+        return $this->normalizeRows($stmt->fetchAll() ?: []);
+    }
+
+    public function sumByCategoryDateRange(string $startDate, string $endDate): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT c.name, COALESCE(SUM(e.amount), 0) AS total
+             FROM categories c
+             LEFT JOIN expenses e ON c.id = e.category_id
+                 AND DATE(e.created_at) BETWEEN :start_date AND :end_date
+             GROUP BY c.id, c.name
+             HAVING total > 0
+             ORDER BY total DESC'
+        );
+        $stmt->bindValue(':start_date', $startDate, PDO::PARAM_STR);
+        $stmt->bindValue(':end_date', $endDate, PDO::PARAM_STR);
+        $stmt->execute();
+
+        $rows = $stmt->fetchAll() ?: [];
+
+        return array_map(static function (array $row): array {
+            $row['total'] = (int) ($row['total'] ?? 0);
+
+            return $row;
+        }, $rows);
+    }
+
+    public function totalByDateRange(string $startDate, string $endDate): int
+    {
+        $stmt = $this->db->prepare(
+            'SELECT COALESCE(SUM(amount), 0) AS total
+             FROM expenses
+             WHERE DATE(created_at) BETWEEN :start_date AND :end_date'
+        );
+        $stmt->bindValue(':start_date', $startDate, PDO::PARAM_STR);
+        $stmt->bindValue(':end_date', $endDate, PDO::PARAM_STR);
+        $stmt->execute();
+
+        return (int) ($stmt->fetchColumn() ?: 0);
+    }
+
     private function buildFilterWhereSql(array $filters, array &$params): string
     {
         $clauses = [];

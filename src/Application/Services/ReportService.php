@@ -50,7 +50,9 @@ class ReportService
         $uploadResult = $this->uploadToFileIo($filePath);
 
         // Hapus file lokal
-        @unlink($filePath);
+        if (is_file($filePath)) {
+            unlink($filePath);
+        }
 
         if (!$uploadResult['success']) {
             return [
@@ -84,8 +86,7 @@ class ReportService
         }
 
         // Fallback: 0x0.st
-        $result = $this->tryUpload0x0($filePath);
-        return $result;
+        return $this->tryUpload0x0($filePath);
     }
 
     /**
@@ -203,8 +204,6 @@ class ReportService
 
     /**
      * Generate filename untuk custom period
-     * @param array $period
-     * @return string
      */
     private function getFilenameCustom(array $period): string
     {
@@ -215,27 +214,21 @@ class ReportService
             10 => 'oktober', 11 => 'november', 12 => 'desember',
         ];
 
-        switch ($period['type']) {
-            case 'year':
-                return "laporan_keuangan_{$period['year']}.xlsx";
-            case 'month':
-                return "laporan_keuangan_{$months[$period['month']]}_{$period['year']}.xlsx";
-            case 'year_range':
-                return "laporan_keuangan_{$period['start_year']}-{$period['end_year']}.xlsx";
-            case 'month_range':
-            case 'date_range':
-                $start = str_replace(['/', ' '], '-', $period['start_label']);
-                $end = str_replace(['/', ' '], '-', $period['end_label']);
-                return "laporan_keuangan_{$start}_sd_{$end}.xlsx";
-            default:
-                return "laporan_keuangan_custom_" . date('Y-m-d') . ".xlsx";
-        }
+        return match ($period['type']) {
+            'year' => "laporan_keuangan_{$period['year']}.xlsx",
+            'month' => "laporan_keuangan_{$months[$period['month']]}_{$period['year']}.xlsx",
+            'year_range' => "laporan_keuangan_{$period['start_year']}-{$period['end_year']}.xlsx",
+            'month_range', 'date_range' => 'laporan_keuangan_'
+                . strtolower(str_replace(['/', ' '], '-', $period['start_label']))
+                . '_sd_'
+                . strtolower(str_replace(['/', ' '], '-', $period['end_label']))
+                . '.xlsx',
+            default => 'laporan_keuangan_custom_' . date('Y-m-d') . '.xlsx',
+        };
     }
 
     /**
      * Generate report Excel untuk custom period dan upload
-     * @param array $period Parsed period dari Parser::parseCustomPeriod()
-     * @return array
      */
     public function generateReportCustom(array $period): array
     {
@@ -266,7 +259,9 @@ class ReportService
         $uploadResult = $this->uploadToFileIo($filePath);
 
         // Hapus file lokal
-        @unlink($filePath);
+        if (is_file($filePath)) {
+            unlink($filePath);
+        }
 
         if (!$uploadResult['success']) {
             return [
@@ -293,19 +288,12 @@ class ReportService
      */
     private function getPeriodLabel(string $period): string
     {
-        switch ($period) {
-            case 'mingguan':
-            case 'minggu':
-                return 'Mingguan';
-            case 'bulanan':
-            case 'bulan':
-                return 'Bulanan';
-            case 'tahunan':
-            case 'tahun':
-                return 'Tahunan';
-            default:
-                return ucfirst($period);
-        }
+        return match ($period) {
+            'mingguan', 'minggu' => 'Mingguan',
+            'bulanan', 'bulan' => 'Bulanan',
+            'tahunan', 'tahun' => 'Tahunan',
+            default => ucfirst($period),
+        };
     }
 
     private function getSslCurlOptions(): array
