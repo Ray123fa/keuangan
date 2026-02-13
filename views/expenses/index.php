@@ -359,7 +359,7 @@ window.expenseModal = (function () {
             return null;
         }
 
-        return new window.Choices(selectEl, {
+        var instance = new window.Choices(selectEl, {
             searchEnabled: true,
             searchChoices: true,
             shouldSort: false,
@@ -378,6 +378,39 @@ window.expenseModal = (function () {
             placeholder: true,
             placeholderValue: isCreate ? 'Pilih atau ketik kategori' : null
         });
+
+        // Fix dropdown clipping inside overflow-y-auto modal panels
+        // by switching the dropdown to position:fixed and calculating coords
+        var containerEl = instance.containerOuter && instance.containerOuter.element
+            ? instance.containerOuter.element
+            : null;
+
+        if (containerEl) {
+            var positionDropdown = function () {
+                var dropdown = containerEl.querySelector('.choices__list--dropdown');
+                if (!dropdown) return;
+
+                var rect = containerEl.getBoundingClientRect();
+                dropdown.classList.add('is-fixed-pos');
+                dropdown.style.top = rect.bottom + 'px';
+                dropdown.style.left = rect.left + 'px';
+                dropdown.style.width = rect.width + 'px';
+            };
+
+            selectEl.addEventListener('showDropdown', positionDropdown);
+
+            // Reposition on scroll inside modal panel
+            var scrollParent = containerEl.closest('.overflow-y-auto');
+            if (scrollParent) {
+                scrollParent.addEventListener('scroll', function () {
+                    if (containerEl.classList.contains('is-open')) {
+                        positionDropdown();
+                    }
+                });
+            }
+        }
+
+        return instance;
     }
 
     function buildCategorySelect(id, name, selectedId, includePlaceholder) {
@@ -1105,7 +1138,7 @@ window.expenseModal = (function () {
         });
 
         dialog = h('div', {
-            className: 'fixed inset-0 z-[9999] flex items-end justify-center px-3 pb-3 pt-6 pointer-events-none sm:items-center sm:px-4 sm:pb-4',
+            className: 'fixed inset-0 z-[9999] flex items-center justify-center p-3 pointer-events-none sm:p-4',
             role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId
         }, [
             h('div', { className: 'panel relative w-full max-w-2xl max-h-[88vh] overflow-y-auto rounded-2xl p-5 pointer-events-auto sm:p-6' }, [
@@ -1261,7 +1294,7 @@ window.expenseModal = (function () {
         });
 
         dialog = h('div', {
-            className: 'fixed inset-0 z-[9999] flex items-end justify-center px-3 pb-3 pt-6 pointer-events-none sm:items-center sm:px-4 sm:pb-4',
+            className: 'fixed inset-0 z-[9999] flex items-center justify-center p-3 pointer-events-none sm:p-4',
             role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'delete-expense-title'
         }, [
             h('div', { className: 'panel relative w-full max-w-md max-h-[88vh] overflow-y-auto rounded-2xl p-5 pointer-events-auto sm:p-6' }, [
@@ -1473,7 +1506,7 @@ window.expenseModal = (function () {
         });
 
         dialog = h('div', {
-            className: 'fixed inset-0 z-[9999] flex items-end justify-center px-3 pb-3 pt-6 pointer-events-none sm:items-center sm:px-4 sm:pb-4',
+            className: 'fixed inset-0 z-[9999] flex items-center justify-center p-3 pointer-events-none sm:p-4',
             role: 'dialog',
             'aria-modal': 'true',
             'aria-labelledby': 'export-expense-title'

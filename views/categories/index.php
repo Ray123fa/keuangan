@@ -232,7 +232,7 @@ window.categoryModal = (function () {
         });
 
         dialog = h('div', {
-            className: 'fixed inset-0 z-[9999] flex items-end justify-center px-3 pb-3 pt-6 pointer-events-none sm:items-center sm:px-4 sm:pb-4',
+            className: 'fixed inset-0 z-[9999] flex items-center justify-center p-3 pointer-events-none sm:p-4',
             role: 'dialog',
             'aria-modal': 'true',
             'aria-labelledby': 'edit-category-title'
@@ -322,7 +322,7 @@ window.categoryModal = (function () {
         });
 
         dialog = h('div', {
-            className: 'fixed inset-0 z-[9999] flex items-end justify-center px-3 pb-3 pt-6 pointer-events-none sm:items-center sm:px-4 sm:pb-4',
+            className: 'fixed inset-0 z-[9999] flex items-center justify-center p-3 pointer-events-none sm:p-4',
             role: 'dialog',
             'aria-modal': 'true',
             'aria-labelledby': 'delete-category-title'
