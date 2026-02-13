@@ -5,6 +5,12 @@ namespace App\Core;
 
 final class View
 {
+    /** @var string[] Keys that must never be injected into template scope */
+    private const RESERVED_KEYS = [
+        'this', '_SERVER', '_GET', '_POST', '_COOKIE', '_FILES', '_ENV', '_REQUEST', '_SESSION',
+        'GLOBALS', 'templatePath', 'layoutPath', 'data', 'template', 'layout', 'content',
+    ];
+
     public static function render(string $template, array $data = [], string $layout = 'admin'): void
     {
         $templatePath = __DIR__ . '/../../views/' . $template . '.php';
@@ -16,7 +22,8 @@ final class View
             return;
         }
 
-        extract($data, EXTR_SKIP);
+        $safeData = array_diff_key($data, array_flip(self::RESERVED_KEYS));
+        extract($safeData, EXTR_SKIP);
 
         ob_start();
         require $templatePath;

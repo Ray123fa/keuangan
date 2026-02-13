@@ -47,13 +47,9 @@ class FonnteService
             CURLOPT_HTTPHEADER => [
                 'Authorization: ' . $this->token,
             ],
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
         ];
-
-        // Enable SSL verification in production
-        if (APP_ENV === 'production') {
-            $curlOptions[CURLOPT_SSL_VERIFYPEER] = true;
-            $curlOptions[CURLOPT_SSL_VERIFYHOST] = 2;
-        }
 
         curl_setopt_array($curl, $curlOptions);
 

@@ -106,7 +106,7 @@ if (empty(FONNTE_TOKEN)) {
 
 define('APP_ENV', envValue('APP_ENV', 'development'));
 define('APP_DEBUG', envBool('APP_DEBUG', true));
-define('WHITELIST_NUMBERS', envValue('WHITELIST_NUMBERS', '6282255623881'));
+define('WHITELIST_NUMBERS', envValue('WHITELIST_NUMBERS', ''));
 
 // ============================================
 // TIMEZONE
@@ -121,7 +121,7 @@ date_default_timezone_set($timezone);
 
 error_reporting(E_ALL);
 
-if (APP_DEBUG) {
+if (APP_DEBUG && APP_ENV !== 'production') {
     ini_set('display_errors', 1);
 } else {
     ini_set('display_errors', 0);

@@ -47,6 +47,9 @@ Thumbs.db
 .cache/
 cache/
 
+# Rate limit data
+/storage/rate_limits/*.json
+
 # Node (if using any frontend build tools)
 node_modules/
 npm-debug.log

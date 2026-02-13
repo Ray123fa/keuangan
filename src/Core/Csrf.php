@@ -31,6 +31,17 @@ final class Csrf
             return false;
         }
 
-        return hash_equals($sessionToken, $token);
+        $valid = hash_equals($sessionToken, $token);
+
+        if ($valid) {
+            self::regenerate();
+        }
+
+        return $valid;
+    }
+
+    public static function regenerate(): void
+    {
+        Session::put(self::SESSION_KEY, bin2hex(random_bytes(32)));
     }
 }

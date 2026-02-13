@@ -12,6 +12,12 @@ final class WebhookController
     {
         header('Content-Type: application/json; charset=utf-8');
 
+        if (!$this->verifyWebhookSecret()) {
+            http_response_code(403);
+            echo json_encode(['status' => false, 'message' => 'Forbidden']);
+            return;
+        }
+
         $rawInput = file_get_contents('php://input');
         $data = json_decode($rawInput, true);
 
@@ -41,8 +47,9 @@ final class WebhookController
 
         $whitelistNumbers = $this->parseWhitelistNumbers((string) WHITELIST_NUMBERS);
         if (empty($whitelistNumbers)) {
-            error_log('WARNING: WHITELIST_NUMBERS is empty. Falling back to default hardcoded number.');
-            $whitelistNumbers = ['6282255623881'];
+            error_log('CRITICAL: WHITELIST_NUMBERS is empty. Rejecting all webhook requests.');
+            echo json_encode(['status' => false, 'message' => 'Service unavailable']);
+            return;
         }
 
         if (!in_array($sender, $whitelistNumbers, true)) {
@@ -69,29 +76,53 @@ final class WebhookController
 
     private function checkRateLimit(string $sender, int $maxPerMinute): bool
     {
-        $lockFile = sys_get_temp_dir() . '/fonnte_rate_' . md5($sender) . '.lock';
+        $rateLimitDir = __DIR__ . '/../../storage/rate_limits';
+        if (!is_dir($rateLimitDir)) {
+            mkdir($rateLimitDir, 0755, true);
+        }
+
+        $lockFile = $rateLimitDir . '/fonnte_rate_' . hash('sha256', $sender) . '.json';
         $now = time();
         $oneMinuteAgo = $now - 60;
 
-        $requests = [];
-        if (file_exists($lockFile)) {
-            $content = file_get_contents($lockFile);
-            $data = json_decode($content === false ? '' : $content, true);
+        $handle = fopen($lockFile, 'c+');
+        if ($handle === false) {
+            error_log('Rate limit: failed to open lock file');
+            return true;
+        }
 
+        if (!flock($handle, LOCK_EX)) {
+            fclose($handle);
+            return true;
+        }
+
+        $content = stream_get_contents($handle);
+        $requests = [];
+
+        if ($content !== false && $content !== '') {
+            $data = json_decode($content, true);
             if (is_array($data) && isset($data['timestamps']) && is_array($data['timestamps'])) {
-                $requests = array_filter(
+                $requests = array_values(array_filter(
                     $data['timestamps'],
                     static fn(mixed $timestamp): bool => is_int($timestamp) && $timestamp > $oneMinuteAgo
-                );
+                ));
             }
         }
 
         if (count($requests) >= $maxPerMinute) {
+            flock($handle, LOCK_UN);
+            fclose($handle);
             return false;
         }
 
         $requests[] = $now;
-        file_put_contents($lockFile, json_encode(['timestamps' => $requests]), LOCK_EX);
+
+        ftruncate($handle, 0);
+        rewind($handle);
+        fwrite($handle, json_encode(['timestamps' => $requests]));
+        fflush($handle);
+        flock($handle, LOCK_UN);
+        fclose($handle);
 
         return true;
     }
@@ -121,5 +152,29 @@ final class WebhookController
         $encoded = json_encode($safe, JSON_UNESCAPED_UNICODE);
 
         return $encoded === false ? '{}' : $encoded;
+    }
+
+    private function verifyWebhookSecret(): bool
+    {
+        $configuredSecret = envValue('WEBHOOK_SECRET', '');
+        if ($configuredSecret === null || $configuredSecret === '') {
+            // Jika secret belum dikonfigurasi, log warning dan izinkan (backward compatible)
+            // Setelah secret dikonfigurasi, request tanpa secret akan ditolak
+            error_log('WARNING: WEBHOOK_SECRET not configured. Webhook requests are unprotected.');
+            return true;
+        }
+
+        $providedSecret = isset($_GET['secret']) ? (string) $_GET['secret'] : '';
+        if ($providedSecret === '') {
+            error_log('Webhook rejected: missing secret parameter');
+            return false;
+        }
+
+        if (!hash_equals($configuredSecret, $providedSecret)) {
+            error_log('Webhook rejected: invalid secret');
+            return false;
+        }
+
+        return true;
     }
 }
