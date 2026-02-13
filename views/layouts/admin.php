@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 use App\Core\Auth;
@@ -19,6 +20,7 @@ $navItems = [
 ?>
 <!doctype html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -139,6 +141,7 @@ $navItems = [
         }
     </style>
 </head>
+
 <body class="min-h-screen" x-data="{ openMenu: false }">
     <header class="sticky top-0 z-40 border-b border-[var(--line)]/70 bg-[color:rgba(255,253,248,0.84)] backdrop-blur-md">
         <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3">
@@ -151,8 +154,7 @@ $navItems = [
                     <?php $isActive = $requestPath === $item['href']; ?>
                     <a
                         href="<?= View::escape((string) $item['href']) ?>"
-                        class="focus-ring rounded-xl border px-3 py-2 text-sm font-semibold transition <?= $isActive ? 'border-[var(--accent)]/35 bg-[var(--accent-soft)] text-[var(--accent)]' : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:border-[var(--accent)]/30 hover:text-[var(--accent)]' ?>"
-                    >
+                        class="focus-ring rounded-xl border px-3 py-2 text-sm font-semibold transition <?= $isActive ? 'border-[var(--accent)]/35 bg-[var(--accent-soft)] text-[var(--accent)]' : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:border-[var(--accent)]/30 hover:text-[var(--accent)]' ?>">
                         <?= View::escape((string) $item['label']) ?>
                     </a>
                 <?php endforeach; ?>
@@ -160,15 +162,14 @@ $navItems = [
 
             <button
                 class="focus-ring h-11 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 text-sm font-semibold text-[var(--ink)] md:hidden"
-                @click="openMenu = !openMenu"
-            >
+                @click="openMenu = !openMenu">
                 Menu
             </button>
 
             <div class="hidden items-center gap-3 md:flex">
                 <div class="panel flex items-center gap-3 rounded-2xl px-3 py-2">
                     <?php if ($adminAvatar !== ''): ?>
-                        <img src="<?= View::escape($adminAvatar) ?>" alt="Avatar admin" class="h-9 w-9 rounded-full border border-[var(--line)] object-cover">
+                        <img src="<?= View::escape($adminAvatar) ?>" alt="Avatar admin" referrerpolicy="no-referrer" class="h-9 w-9 rounded-full border border-[var(--line)] object-cover">
                     <?php else: ?>
                         <span class="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface-strong)] text-sm font-bold text-[var(--accent)]">
                             <?= View::escape($avatarInitial) ?>
@@ -190,15 +191,13 @@ $navItems = [
             class="border-t border-[var(--line)]/80 bg-[var(--surface)] px-3 py-3 sm:px-4 md:hidden"
             x-show="openMenu"
             x-transition.opacity.duration.250ms
-            x-cloak
-        >
+            x-cloak>
             <div class="mb-3 grid gap-2">
                 <?php foreach ($navItems as $item): ?>
                     <?php $isActive = $requestPath === $item['href']; ?>
                     <a
                         href="<?= View::escape((string) $item['href']) ?>"
-                        class="focus-ring rounded-xl border px-3 py-2.5 text-sm font-semibold transition <?= $isActive ? 'border-[var(--accent)]/35 bg-[var(--accent-soft)] text-[var(--accent)]' : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink)]' ?>"
-                    >
+                        class="focus-ring rounded-xl border px-3 py-2.5 text-sm font-semibold transition <?= $isActive ? 'border-[var(--accent)]/35 bg-[var(--accent-soft)] text-[var(--accent)]' : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink)]' ?>">
                         <?= View::escape((string) $item['label']) ?>
                     </a>
                 <?php endforeach; ?>
@@ -221,4 +220,5 @@ $navItems = [
         <?= $content ?>
     </main>
 </body>
+
 </html>

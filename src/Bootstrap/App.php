@@ -7,6 +7,7 @@ use App\Controllers\Admin\AuthController;
 use App\Controllers\Admin\CategoryController;
 use App\Controllers\Admin\DashboardController;
 use App\Controllers\Admin\ExpenseController;
+use App\Controllers\Admin\ReportController;
 use App\Controllers\WebhookController;
 use App\Core\Auth;
 use App\Core\Router;
@@ -21,6 +22,7 @@ final class App
         $categoryController = new CategoryController();
         $dashboardController = new DashboardController();
         $expenseController = new ExpenseController();
+        $reportController = new ReportController();
         $webhookController = new WebhookController();
 
         $router->get('/', static function (): void {
@@ -63,6 +65,10 @@ final class App
         $router->post('/admin/expenses/delete', static function () use ($expenseController): void {
             Auth::requireAdmin();
             $expenseController->delete();
+        });
+        $router->get('/admin/reports/export', static function () use ($reportController): void {
+            Auth::requireAdmin();
+            $reportController->export();
         });
         $router->get('/admin/login', [$authController, 'showLogin']);
         $router->get('/admin/auth/google', [$authController, 'redirectToGoogle']);

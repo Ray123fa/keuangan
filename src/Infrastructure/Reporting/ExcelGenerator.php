@@ -30,7 +30,7 @@ class ExcelGenerator
      * @param float $grandTotal
      * @param string|array $period String untuk legacy period, array untuk custom period
      */
-    public function generate(array $expenses, array $totalByCategory, float $grandTotal, $period): ?string
+    public function generate(array $expenses, array $totalByCategory, float $grandTotal, string|array $period): ?string
     {
         try {
             $spreadsheet = new Spreadsheet();
@@ -58,12 +58,8 @@ class ExcelGenerator
 
     /**
      * Buat sheet detail pengeluaran
-     * @param Spreadsheet $spreadsheet
-     * @param array $expenses
-     * @param float $grandTotal
-     * @param string|array $period
      */
-    private function createDetailSheet(Spreadsheet $spreadsheet, array $expenses, float $grandTotal, $period): void
+    private function createDetailSheet(Spreadsheet $spreadsheet, array $expenses, float $grandTotal, string|array $period): void
     {
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Detail');
@@ -195,56 +191,37 @@ class ExcelGenerator
 
     /**
      * Get period label
-     * @param string|array $period
-     * @return string
      */
-    private function getPeriodLabel($period): string
+    private function getPeriodLabel(string|array $period): string
     {
-        // Custom period (array from Parser::parseCustomPeriod)
-        if (is_array($period)) {
-            $months = [
-                1 => 'Januari', 2 => 'Februari', 3 => 'Maret',
-                4 => 'April', 5 => 'Mei', 6 => 'Juni',
-                7 => 'Juli', 8 => 'Agustus', 9 => 'September',
-                10 => 'Oktober', 11 => 'November', 12 => 'Desember',
-            ];
-
-            switch ($period['type']) {
-                case 'year':
-                    return "TAHUN {$period['year']}";
-                case 'month':
-                    return strtoupper($months[$period['month']]) . " {$period['year']}";
-                case 'year_range':
-                    return "{$period['start_year']} - {$period['end_year']}";
-                case 'month_range':
-                    return strtoupper("{$period['start_label']} - {$period['end_label']}");
-                case 'date_range':
-                    return "{$period['start_label']} - {$period['end_label']}";
-                default:
-                    return 'CUSTOM';
-            }
+        if (is_string($period)) {
+            return match ($period) {
+                'mingguan', 'minggu' => 'MINGGUAN',
+                'bulanan', 'bulan' => 'BULANAN',
+                'tahunan', 'tahun' => 'TAHUNAN',
+                default => strtoupper($period),
+            };
         }
 
-        // Legacy string period
-        switch ($period) {
-            case 'mingguan':
-            case 'minggu':
-                return 'MINGGUAN';
-            case 'bulanan':
-            case 'bulan':
-                return 'BULANAN';
-            case 'tahunan':
-            case 'tahun':
-                return 'TAHUNAN';
-            default:
-                return strtoupper($period);
-        }
+        $months = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret',
+            4 => 'April', 5 => 'Mei', 6 => 'Juni',
+            7 => 'Juli', 8 => 'Agustus', 9 => 'September',
+            10 => 'Oktober', 11 => 'November', 12 => 'Desember',
+        ];
+
+        return match ($period['type']) {
+            'year' => "TAHUN {$period['year']}",
+            'month' => strtoupper($months[$period['month']]) . " {$period['year']}",
+            'year_range' => "{$period['start_year']} - {$period['end_year']}",
+            'month_range' => strtoupper("{$period['start_label']} - {$period['end_label']}"),
+            'date_range' => "{$period['start_label']} - {$period['end_label']}",
+            default => 'CUSTOM',
+        };
     }
 
     /**
      * Get slug untuk filename dari custom period
-     * @param array $period
-     * @return string
      */
     private function getPeriodSlug(array $period): string
     {
@@ -255,20 +232,16 @@ class ExcelGenerator
             10 => 'oktober', 11 => 'november', 12 => 'desember',
         ];
 
-        switch ($period['type']) {
-            case 'year':
-                return "tahun_{$period['year']}";
-            case 'month':
-                return $months[$period['month']] . "_{$period['year']}";
-            case 'year_range':
-                return "{$period['start_year']}-{$period['end_year']}";
-            case 'month_range':
-            case 'date_range':
-                $start = str_replace(['/', ' '], '-', $period['start_label']);
-                $end = str_replace(['/', ' '], '-', $period['end_label']);
-                return strtolower("{$start}_sd_{$end}");
-            default:
-                return 'custom';
-        }
+        return match ($period['type']) {
+            'year' => "tahun_{$period['year']}",
+            'month' => $months[$period['month']] . "_{$period['year']}",
+            'year_range' => "{$period['start_year']}-{$period['end_year']}",
+            'month_range', 'date_range' => strtolower(
+                str_replace(['/', ' '], '-', $period['start_label'])
+                . '_sd_'
+                . str_replace(['/', ' '], '-', $period['end_label'])
+            ),
+            default => 'custom',
+        };
     }
 }
