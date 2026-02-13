@@ -108,7 +108,9 @@ final class ExpenseController
                 $this->db->rollBack();
             }
 
-            throw $exception;
+            error_log('Expense store error: ' . $exception->getMessage());
+            $this->respondError('Terjadi kesalahan saat menyimpan data.', 500);
+            return;
         }
 
         if ($this->isAjaxRequest()) {
@@ -171,7 +173,9 @@ final class ExpenseController
                 $this->db->rollBack();
             }
 
-            throw $exception;
+            error_log('Expense update error: ' . $exception->getMessage());
+            $this->respondError('Terjadi kesalahan saat memperbarui data.', 500);
+            return;
         }
 
         if ($this->isAjaxRequest()) {

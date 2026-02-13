@@ -195,7 +195,7 @@ final class ReportController
         $fileSize = filesize($filePath);
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header("Content-Disposition: attachment; filename*=UTF-8''" . rawurlencode($filename));
         if (is_int($fileSize)) {
             header('Content-Length: ' . (string) $fileSize);
         }
