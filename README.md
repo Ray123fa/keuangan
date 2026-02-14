@@ -35,7 +35,9 @@ keuangan/
 │   ├── Repositories/
 │   └── Services/
 ├── views/                  # Template server-rendered admin
-├── storage/                # Log aplikasi
+├── storage/                # Log aplikasi & rate limits
+│   ├── logs/
+│   └── rate_limits/
 ├── config.php              # Konfigurasi global (DB, env, logging)
 ├── database.php            # PDO connection singleton
 ├── schema.sql              # Database schema
@@ -139,24 +141,44 @@ DB_PASS=root
 # Fonnte (dapatkan dari dashboard Fonnte)
 FONNTE_TOKEN=your_token_here
 
+# Webhook Secret (generate random string minimal 32 karakter)
+WEBHOOK_SECRET=your_random_secret_token_here
+
 # Whitelist (pisahkan dengan koma)
 WHITELIST_NUMBERS=6282255623881
 
 # Timezone
 TIMEZONE=Asia/Jakarta
+
+# Application
+APP_ENV=development
+APP_DEBUG=true
 ```
 
 ### Setup Webhook
 
 Di dashboard Fonnte:
 1. Pilih device → Edit
-2. Webhook URL: `https://ngrok-url/webhook`
+2. Webhook URL: `https://ngrok-url/webhook?secret=YOUR_WEBHOOK_SECRET`
+   (Gunakan secret token yang sama dengan `WEBHOOK_SECRET` di `.env`)
 3. Aktifkan "Auto Read" = ON
 4. Save
+
+**Catatan Keamanan**: Webhook secret token wajib diset untuk mencegah unauthorized webhook requests.
 
 ## 🖥️ Admin Interface (MVC)
 
 Interface admin tersedia di `https://keuangan.rayfa.my.id/admin`.
+
+### Fitur Admin Dashboard
+
+- 📊 Dashboard overview dengan statistik pengeluaran
+- 💰 Manajemen expense (CRUD) dengan filter & pagination
+- 🏷️ Manajemen kategori (CRUD)
+- 📥 Export expense ke Excel dengan filter fleksibel (tanggal, kategori, custom period)
+- 🔐 Google OAuth authentication
+- 🛡️ CSRF protection & security headers
+- ⏱️ Session timeout management
 
 ### Konfigurasi Google OAuth
 
@@ -330,16 +352,21 @@ bantuan                         (tampilkan panduan ini)
 
 ### Webhook tidak jalan
 - Pastikan "Auto Read" sudah ON di Fonnte
+- Pastikan webhook URL menggunakan secret token yang benar: `/webhook?secret=YOUR_SECRET`
 - Cek apakah URL webhook bisa diakses (tidak error 404/500)
-- Cek file `error.log` untuk melihat error
+- Cek file `storage/logs/error.log` untuk melihat error
 
 ### Database error
-- Pastikan kredensial database di `config.php` sudah benar
-- Pastikan database dan tabel sudah dibuat (import `schema.sql`)
+- Pastikan kredensial database di `.env` sudah benar
+- Pastikan database dan tabel sudah dibuat (jalankan `php artisan migrate`)
 
 ### Excel tidak terkirim
 - Pastikan paket Fonnte kamu mendukung attachment (Super/Advanced/Ultra)
 - Cek apakah PhpSpreadsheet terinstall dengan benar
+
+### Session admin expired terus
+- Cek nilai `SESSION_IDLE_TIMEOUT_MINUTES` dan `SESSION_ABSOLUTE_TIMEOUT_MINUTES` di `.env`
+- Pastikan server time sesuai dengan timezone yang diset
 
 ## Requirements
 
@@ -351,6 +378,17 @@ bantuan                         (tampilkan panduan ini)
 ## 🔒 Keamanan
 
 Bot dilindungi dengan whitelist nomor WhatsApp. Hanya nomor yang terdaftar di variabel `.env` `WHITELIST_NUMBERS` yang dapat mengakses bot. Percakapan dari nomor lain akan diabaikan tanpa respon.
+
+### Fitur Keamanan
+
+- ✅ **Webhook Secret Verification**: Webhook hanya menerima request dengan secret token yang valid
+- ✅ **SSL Verification**: Semua API calls ke Fonnte menggunakan SSL verification
+- ✅ **CSRF Protection**: Token CSRF dengan auto-rotation setelah validasi
+- ✅ **Security Headers**: X-Frame-Options, CSP, X-Content-Type-Options, dll
+- ✅ **Rate Limiting**: Proteksi terhadap spam dengan file-based rate limiter
+- ✅ **Session Security**: Custom session name, idle timeout, absolute timeout
+- ✅ **Input Sanitization**: Sanitasi input dan output untuk mencegah XSS
+- ✅ **Environment Protection**: `.env` file protection via `.htaccess`
 
 ### Mengubah Nomor Whitelist
 
@@ -366,7 +404,20 @@ WHITELIST_NUMBERS=6282255623881,62812345678,62898765432
 
 ## Changelog
 
-### v2.2 (Current - Feb 2026)
+### v2.3 (Current - Feb 2026)
+- 🛡️ **Security Hardening**: OWASP vulnerability fixes
+  - Webhook secret token verification
+  - SSL verification enforcement on API calls
+  - CSRF token rotation
+  - Security response headers (X-Frame-Options, CSP, etc.)
+  - Rate limiter race condition fix with flock()
+  - Content-Disposition header sanitization
+  - Custom session name for reduced fingerprinting
+- ✨ **Admin Features**: Flexible expense export with custom filters
+- 🐛 **UI Fixes**: Centered modals & Choices.js dropdown clipping fix
+- 🔒 **Session Management**: Explicit idle & absolute timeout enforcement
+
+### v2.2 (Feb 2026)
 - 🔒 Whitelist nomor: hanya nomor terdaftar yang bisa mengakses bot
 - 🤐 Silent fail: pesan tidak valid tidak mendapat respon
 
@@ -397,4 +448,4 @@ Private Project
 
 **Created**: Feb 2026  
 **Status**: Active Development  
-**Last Updated**: 10 Feb 2026
+**Last Updated**: 14 Feb 2026
