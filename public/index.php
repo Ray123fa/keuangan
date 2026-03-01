@@ -25,7 +25,7 @@ ini_set('session.gc_maxlifetime', (string) (SESSION_IDLE_TIMEOUT_MINUTES * 60));
 session_name('__keu_sess');
 
 session_set_cookie_params([
-    'lifetime' => 0,
+    'lifetime' => 86400,
     'path' => '/',
     'domain' => '',
     'secure' => $isHttps,
