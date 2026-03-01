@@ -190,9 +190,9 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret
 GOOGLE_REDIRECT_URI=https://keuangan.rayfa.my.id/admin/auth/google/callback
 ADMIN_ALLOWED_EMAILS=admin@email.com
 
-# Session admin
-SESSION_IDLE_TIMEOUT_MINUTES=30
-SESSION_ABSOLUTE_TIMEOUT_MINUTES=720
+# Session admin (1440 menit = 24 jam)
+SESSION_IDLE_TIMEOUT_MINUTES=1440
+SESSION_ABSOLUTE_TIMEOUT_MINUTES=1440
 ```
 
 Di Google Cloud Console (OAuth Web App), daftarkan redirect URI:
